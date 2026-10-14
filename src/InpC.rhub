@@ -126,6 +126,14 @@
     /// @unit % p.a.
     input idx_opx_rate = []  // active: 0.025
 
+    /// @label RPI index - annual rate
+    /// @unit % p.a.
+    input idx_rpi_rate = []  // active: 0.03
+
+    /// @label Fixed opex - share indexed to opex index (rest to RPI)
+    /// @unit %
+    input idx_opx_blend_wt = []  // active: 0.5
+
   ## h_inpc_wc: Working Capital
 
     /// @label Receivables - collection days

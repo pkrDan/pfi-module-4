@@ -34,6 +34,14 @@
   /// @unit index
   calc[t1] idx_opx_factor = IF({{tim_frst_prd_flag[n]}}=1,1,{{idx_opx_factor[n-1]}}*(1+{{idx_opx_rate}}*{{tim_esc_yr_end_flag[n-1]}}*IF({{tim_prd_end[n-1]}}>={{idx_base_dt}},1,0)))
 
+  /// @label RPI index - factor
+  /// @unit index
+  calc[t1] idx_rpi_factor = IF({{tim_frst_prd_flag[n]}}=1,1,{{idx_rpi_factor[n-1]}}*(1+{{idx_rpi_rate}}*{{tim_esc_yr_end_flag[n-1]}}*IF({{tim_prd_end[n-1]}}>={{idx_base_dt}},1,0)))
+
+  /// @label Fixed opex index - blended factor
+  /// @unit index
+  calc[t1] idx_opx_blend_factor = {{idx_opx_blend_wt}}*{{idx_opx_factor[n]}}+(1-{{idx_opx_blend_wt}})*{{idx_rpi_factor[n]}}
+
 
 # h_ops_rev: REVENUE
 
@@ -73,7 +81,7 @@
 
   /// @label Opex - fixed
   /// @unit EUR 000s
-  calc[t1] opx_fixed = {{opx_fixed_annual}}*{{tim_yr_frac[n]}}*{{idx_opx_factor[n]}}*{{tim_ops_flag[n]}}
+  calc[t1] opx_fixed = {{opx_fixed_annual}}*{{tim_yr_frac[n]}}*{{idx_opx_blend_factor[n]}}*{{tim_ops_flag[n]}}
 
   /// @label Opex - variable
   /// @unit EUR 000s
