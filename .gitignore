@@ -1,0 +1,17 @@
+~$*
+.cellori/staging/
+.cellori/diff/
+.cellori/attestation.json
+.cellori/stale-cells.json
+.cellori/validation.json
+.cellori/attest-refusal.json
+.cellori/workbook-stamp.json
+.cellori/parked-edits.json
+.cellori/origin-stamp.json
+.cellori/attest.lock
+.cellori/attest.pending
+engine/
+report/
+run.jsonl
+run_*.jsonl
+raw/
