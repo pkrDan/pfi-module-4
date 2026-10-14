@@ -1,4 +1,4 @@
 // _timelines.rhub - generated on every pull from (workbook, config); read by nothing.
 // Ids re-derive from the assignment key each pull; do not edit.
 
-timeline t1 = {{tim_prd_end}}  // quarterly x183, 2026-01-31..2066-09-30, sheets: Time; counter: {{tim_prd_cntr}}
+timeline t1 = {{tim_prd_end}}  // quarterly x128, 2027-01-31..2054-12-31, sheets: Assets, Cons, Debt, Equity, FS, InpS, Ops, Reserves, Solve, Tax, Time, Waterfall; counter: {{tim_prd_cntr}}

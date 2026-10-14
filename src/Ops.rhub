@@ -1,0 +1,105 @@
+// Ops — decompiler preview: structure, names and derived calc bodies are live output; non-compliant and underived rows render as `raw` lines (coordinates + cell payloads, verbatim)
+  /// @label Error chks
+  /// @slot error-checks
+  calc ops_error_chks = {{total_checks}}  // link
+
+  /// @label Model period ending
+  /// @slot model-period-ending
+  calc[t1] ops_mdl_prd_end = {{tim_prd_end[n]}}  // link
+
+  /// @label Alerts
+  /// @slot alerts
+  calc ops_alerts = {{total_alerts}}  // link
+
+  /// @label Timeline label
+  /// @slot timeline-label
+  calc[t1] ops_tmln_label = {{tim_tmln_label[n]}}  // link
+
+  /// @label Financial year
+  /// @slot contract-year
+  calc[t1] ops_fin_yr = {{tim_fin_yr[n]}}  // link
+
+  /// @label Model column counter
+  /// @slot column-counter
+  calc[t1] ops_column_counter = {{tim_prd_cntr[n]}}  // link
+
+
+# h_ops_idx: INDEXATION
+
+  /// @label Revenue index - factor
+  /// @unit index
+  calc[t1] idx_rev_factor = IF({{tim_frst_prd_flag[n]}}=1,1,{{idx_rev_factor[n-1]}}*(1+{{idx_rev_rate}}*{{tim_esc_yr_end_flag[n-1]}}*IF({{tim_prd_end[n-1]}}>={{idx_base_dt}},1,0)))
+
+  /// @label Opex index - factor
+  /// @unit index
+  calc[t1] idx_opx_factor = IF({{tim_frst_prd_flag[n]}}=1,1,{{idx_opx_factor[n-1]}}*(1+{{idx_opx_rate}}*{{tim_esc_yr_end_flag[n-1]}}*IF({{tim_prd_end[n-1]}}>={{idx_base_dt}},1,0)))
+
+
+# h_ops_rev: REVENUE
+
+  /// @label Revenue A - indexed
+  /// @unit EUR 000s
+  calc[t1] rev_a = {{rev_a_annual}}*{{tim_yr_frac[n]}}*{{idx_rev_factor[n]}}*{{tim_ops_flag[n]}}
+
+  /// @label Revenue B - indexed
+  /// @unit EUR 000s
+  calc[t1] rev_b = {{rev_b_annual}}*{{tim_yr_frac[n]}}*{{idx_rev_factor[n]}}*{{tim_ops_flag[n]}}
+
+  /// @label Revenue - total
+  /// @unit EUR 000s
+  calc[t1] rev_total = {{rev_a[n]}}+{{rev_b[n]}}
+
+
+# h_ops_opx: OPERATING COSTS
+
+  /// @label Opex - fixed
+  /// @unit EUR 000s
+  calc[t1] opx_fixed = {{opx_fixed_annual}}*{{tim_yr_frac[n]}}*{{idx_opx_factor[n]}}*{{tim_ops_flag[n]}}
+
+  /// @label Opex - variable
+  /// @unit EUR 000s
+  calc[t1] opx_var = {{rev_total[n]}}*{{opx_var_pct}}
+
+  /// @label Opex - total
+  /// @unit EUR 000s
+  calc[t1] opx_total = {{opx_fixed[n]}}+{{opx_var[n]}}
+
+
+# h_ops_ebitda: EBITDA
+
+  /// @label EBITDA
+  /// @unit EUR 000s
+  calc[t1] ops_ebitda = {{rev_total[n]}}-{{opx_total[n]}}
+
+
+# h_ops_wc: WORKING CAPITAL
+
+  ## h_ops_wc_rcv: Receivables
+
+    /// @label Receivables - closing balance
+    /// @unit EUR 000s
+    calc[t1] wc_rcv_bal = {{rev_total[n]}}*MIN({{wc_rcv_days}},{{tim_dys_prd[n]}})/{{tim_dys_prd[n]}}*{{tim_ops_flag[n]}}
+
+    /// @label Receivables - movement
+    /// @unit EUR 000s
+    calc[t1] wc_rcv_mvt = {{wc_rcv_bal[n]}}-{{wc_rcv_bal[n-1]}}
+
+  ## h_ops_wc_pay: Payables
+
+    /// @label Payables - closing balance
+    /// @unit EUR 000s
+    calc[t1] wc_pay_bal = {{opx_total[n]}}*MIN({{wc_pay_days}},{{tim_dys_prd[n]}})/{{tim_dys_prd[n]}}*{{tim_ops_flag[n]}}
+
+    /// @label Payables - movement
+    /// @unit EUR 000s
+    calc[t1] wc_pay_mvt = {{wc_pay_bal[n]}}-{{wc_pay_bal[n-1]}}
+
+  ## h_ops_wc_cash: Cash Movement
+
+    /// @label Working capital - cash movement
+    /// @unit EUR 000s
+    calc[t1] wc_cash_mvt = {{wc_pay_mvt[n]}}-{{wc_rcv_mvt[n]}}
+
+    /// @label Working capital - balances left at the end
+    /// @unit check
+    calc chk_wc_closes = IF(ABS(SUMIFS({{wc_rcv_bal[:]}},{{tim_lst_prd_flag[:]}},1)+SUMIFS({{wc_pay_bal[:]}},{{tim_lst_prd_flag[:]}},1))>{{cst_chk_tol}},1,0)

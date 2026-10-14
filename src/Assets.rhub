@@ -1,0 +1,93 @@
+// Assets — decompiler preview: structure, names and derived calc bodies are live output; non-compliant and underived rows render as `raw` lines (coordinates + cell payloads, verbatim)
+  /// @label Error chks
+  /// @slot error-checks
+  calc ast_error_chks = {{total_checks}}  // link
+
+  /// @label Model period ending
+  /// @slot model-period-ending
+  calc[t1] ast_mdl_prd_end = {{tim_prd_end[n]}}  // link
+
+  /// @label Alerts
+  /// @slot alerts
+  calc ast_alerts = {{total_alerts}}  // link
+
+  /// @label Timeline label
+  /// @slot timeline-label
+  calc[t1] ast_tmln_label = {{tim_tmln_label[n]}}  // link
+
+  /// @label Financial year
+  /// @slot contract-year
+  calc[t1] ast_fin_yr = {{tim_fin_yr[n]}}  // link
+
+  /// @label Model column counter
+  /// @slot column-counter
+  calc[t1] ast_column_counter = {{tim_prd_cntr[n]}}  // link
+
+
+# h_ast_fa: FIXED ASSETS
+
+  ## h_ast_fa_acc: Accounting Depreciation
+
+    /// @label Fixed assets - cost at COD (commercial operation date)
+    /// @unit EUR 000s
+    calc[t1] fa_cost_bal = {{fa_cost_bal[n-1]}}+IF({{tim_prd_end[n]}}<={{tim_con_end_dt}},{{cpx_total[n]}},0)
+
+    /// @label Fixed assets - accounting depreciation
+    /// @unit EUR 000s
+    calc[t1] fa_acc_dep = MIN({{fa_cost_bal[n]}}/{{fa_acc_life_yrs}}*{{tim_yr_frac[n]}},{{fa_nbv[n-1]}}+{{cpx_total[n]}})*{{tim_ops_flag[n]}}
+
+    /// @label Fixed assets - write-off at operations end
+    /// @unit EUR 000s
+    calc[t1] fa_nbv_writeoff = ({{fa_nbv[n-1]}}+{{cpx_total[n]}}-{{fa_acc_dep[n]}})*{{tim_ops_lst_flag[n]}}
+
+    /// @label Fixed assets - net book value
+    /// @unit EUR 000s
+    calc[t1] fa_nbv = {{fa_nbv[n-1]}}+{{cpx_total[n]}}-{{fa_acc_dep[n]}}-{{fa_nbv_writeoff[n]}}
+
+  ## h_ast_fa_tax: Tax Depreciation
+
+    /// @label Fixed assets - tax depreciation
+    /// @unit EUR 000s
+    calc[t1] fa_tax_dep = IF({{tim_ops_lst_flag[n]}}=1,{{fa_twdv[n-1]}}+{{cpx_total[n]}},{{fa_twdv[n-1]}}*{{fa_tax_db_rate}}*{{tim_yr_frac[n]}}*{{tim_ops_flag[n]}})
+
+    /// @label Fixed assets - tax written-down value
+    /// @unit EUR 000s
+    calc[t1] fa_twdv = {{fa_twdv[n-1]}}+{{cpx_total[n]}}-{{fa_tax_dep[n]}}
+
+
+# h_ast_fin: FINANCING COST ASSET
+
+  ## h_ast_fin_cost: Cost and Repayment Window
+
+    /// @label Financing costs - cost at COD
+    /// @unit EUR 000s
+    calc[t1] fa_fin_cost_bal = {{fa_fin_cost_bal[n-1]}}+IF({{tim_prd_end[n]}}<={{tim_con_end_dt}},{{fnd_cap_fin_cost[n]}},0)
+
+    /// @label Financing costs - days in amortisation period
+    /// @unit days
+    calc[t1] fa_fin_amort_dys = {{tim_dys_prd[n]}}*IF({{sd_rpmt_prds}}>0,{{sd_rpmt_flag[n]}},{{tim_ops_flag[n]}})
+
+    /// @label Financing costs - total days in amortisation window
+    /// @unit days
+    calc fa_fin_amort_dys_tot = SUM({{fa_fin_amort_dys[:]}})
+
+  ## h_ast_fin_amort: Amortisation
+
+    /// @label Financing costs - amortisation
+    /// @unit EUR 000s
+    calc[t1] fa_fin_amort = IF({{fa_fin_amort_dys_tot}}=0,0,{{fa_fin_cost_bal[n]}}*{{fa_fin_amort_dys[n]}}/{{fa_fin_amort_dys_tot}})
+
+    /// @label Financing costs - net book value
+    /// @unit EUR 000s
+    calc[t1] fa_fin_nbv = {{fa_fin_nbv[n-1]}}+{{fnd_cap_fin_cost[n]}}-{{fa_fin_amort[n]}}
+
+
+# h_ast_chk: ASSET CHECKS
+
+  /// @label Fixed assets - written off before fully depreciated
+  /// @unit alert
+  calc chk_fa_alert_writeoff = IF(SUM({{fa_nbv_writeoff[:]}})>{{cst_chk_tol}},1,0)
+
+  /// @label Financing costs - not fully amortised by end of repayment
+  /// @unit check
+  calc chk_fa_fin_zero = IF(ABS(SUMIFS({{fa_fin_nbv[:]}},{{tim_lst_prd_flag[:]}},1))>{{cst_chk_tol}},1,0)

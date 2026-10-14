@@ -206,3 +206,7 @@
   /// @label Period fraction of a year (operating grain)
   /// @unit fraction
   calc tim_prd_fraction = {{tim_ops_prd_mos}}/{{cst_mos_yr}}
+
+  /// @label Year fraction of period
+  /// @unit fraction
+  calc[t1] tim_yr_frac = {{tim_mos_prd[n]}}/{{cst_mos_yr}}

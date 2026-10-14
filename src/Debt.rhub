@@ -1,0 +1,235 @@
+// Debt — decompiler preview: structure, names and derived calc bodies are live output; non-compliant and underived rows render as `raw` lines (coordinates + cell payloads, verbatim)
+  /// @label Error chks
+  /// @slot error-checks
+  calc debt_error_chks = {{total_checks}}  // link
+
+  /// @label Model period ending
+  /// @slot model-period-ending
+  calc[t1] debt_mdl_prd_end = {{tim_prd_end[n]}}  // link
+
+  /// @label Alerts
+  /// @slot alerts
+  calc debt_alerts = {{total_alerts}}  // link
+
+  /// @label Timeline label
+  /// @slot timeline-label
+  calc[t1] debt_tmln_label = {{tim_tmln_label[n]}}  // link
+
+  /// @label Financial year
+  /// @slot contract-year
+  calc[t1] debt_fin_yr = {{tim_fin_yr[n]}}  // link
+
+  /// @label Model column counter
+  /// @slot column-counter
+  calc[t1] debt_column_counter = {{tim_prd_cntr[n]}}  // link
+
+
+# h_debt_sd_size: SENIOR FACILITY SIZING
+
+  ## h_debt_sd_window: Repayment Window
+
+    /// @label Senior facility - repayment period flag
+    /// @unit flag
+    calc[t1] sd_rpmt_flag = {{tim_ops_flag[n]}}*IF({{tim_prd_end[n]}}<=EDATE({{tim_con_end_dt}},{{sd_tenor_yrs}}*{{cst_mos_yr}}),1,0)
+
+    /// @label Senior facility - number of repayment periods
+    /// @unit counter
+    calc sd_rpmt_prds = SUM({{sd_rpmt_flag[:]}})
+
+  ## h_debt_sd_capacity: Debt Capacity
+
+    /// @label Senior facility - debt service at target DSCR
+    /// @unit EUR 000s
+    calc[t1] sd_ds_max = {{wf_cfads[n]}}/{{sd_target_dscr}}*{{sd_rpmt_flag[n]}}
+
+    /// @label Senior facility - discount factor
+    /// @unit factor
+    calc[t1] sd_df = IF({{tim_ops_strt_flag[n]}}=1,1,{{sd_df[n-1]}})/(1+{{sd_rate}}*{{tim_dys_prd[n]}}/{{cst_dys_yr}})*{{sd_rpmt_flag[n]}}
+
+    /// @label Senior facility - debt capacity
+    /// @unit EUR 000s
+    calc sd_capacity = SUMPRODUCT({{sd_ds_max[:]}},{{sd_df[:]}})
+
+  ## h_debt_sd_sculpt: Sculpting Cover
+
+    /// @label Senior facility - balance at COD
+    /// @unit EUR 000s
+    calc sd_bal_cod = SUM({{fnd_sd_draw[:]}})
+
+    /// @label Senior facility - effective sculpting DSCR
+    /// @unit ratio
+    calc sd_dscr_eff = IF({{sd_bal_cod}}<={{cst_chk_tol}},{{sd_target_dscr}},{{sd_target_dscr}}*MAX(1,{{sd_capacity_paste}}/{{sd_bal_cod}}))
+
+    /// @label Senior facility - sculpted debt service
+    /// @unit EUR 000s
+    calc[t1] sd_ds_target = {{wf_cfads[n]}}/{{sd_dscr_eff}}*{{sd_rpmt_flag[n]}}
+
+
+# h_debt_sd_rpmt: SENIOR FACILITY INTEREST AND REPAYMENT
+
+  ## h_debt_sd_int: Opening Balance and Interest
+
+    /// @label Senior facility - opening balance
+    /// @unit EUR 000s
+    calc[t1] sd_bal_open = {{sd_bal_close[n-1]}}
+
+    /// @label Senior facility - interest
+    /// @unit EUR 000s
+    calc[t1] sd_int = {{sd_bal_open[n]}}*{{sd_rate}}*{{tim_dys_prd[n]}}/{{cst_dys_yr}}*{{tim_ops_flag[n]}}
+
+  ## h_debt_sd_methods: Repayment Methods
+
+    /// @label Senior facility - sculpted principal
+    /// @unit EUR 000s
+    calc[t1] sd_prin_sculpt = MAX(0,{{sd_ds_target[n]}}-{{sd_int[n]}})
+
+    /// @label Senior facility - annuity payment
+    /// @unit EUR 000s
+    calc sd_annuity_pmt = IF(SUM({{sd_df[:]}})=0,0,{{sd_bal_cod}}/SUM({{sd_df[:]}}))
+
+    /// @label Senior facility - annuity principal
+    /// @unit EUR 000s
+    calc[t1] sd_prin_annuity = MAX(0,{{sd_annuity_pmt}}-{{sd_int[n]}})*{{sd_rpmt_flag[n]}}
+
+    /// @label Senior facility - straight-line principal
+    /// @unit EUR 000s
+    calc[t1] sd_prin_straight = IF({{sd_rpmt_prds}}=0,0,{{sd_bal_cod}}/{{sd_rpmt_prds}})*{{sd_rpmt_flag[n]}}
+
+    /// @label Senior facility - scheduled principal
+    /// @unit EUR 000s
+    calc[t1] sd_prin = MIN({{sd_bal_open[n]}}+{{fnd_sd_draw[n]}},IF({{sd_rpmt_method}}={{cst_rpmt_method_sculpt}},{{sd_prin_sculpt[n]}},IF({{sd_rpmt_method}}={{cst_rpmt_method_annuity}},{{sd_prin_annuity[n]}},{{sd_prin_straight[n]}})))
+
+  ## h_debt_sd_bal: Closing Balance and Debt Service
+
+    /// @label Senior facility - closing balance
+    /// @unit EUR 000s
+    calc[t1] sd_bal_close = {{sd_bal_open[n]}}+{{fnd_sd_draw[n]}}-{{sd_prin[n]}}-{{wf_sweep[n]}}
+
+    /// @label Senior facility - debt service
+    /// @unit EUR 000s
+    calc[t1] sd_ds = {{sd_int[n]}}+{{sd_prin[n]}}
+
+    /// @label Senior facility - DSCR
+    /// @unit ratio
+    calc[t1] sd_dscr = IF({{sd_ds[n]}}>{{cst_chk_tol}},{{wf_cfads[n]}}/{{sd_ds[n]}},0)*{{sd_rpmt_flag[n]}}
+
+    /// @label Senior facility - debt service above target cover
+    /// @unit EUR 000s
+    calc[t1] sd_ds_excess = MAX(0,{{sd_ds[n]}}-{{sd_ds_max[n]}})*{{sd_rpmt_flag[n]}}
+
+
+# h_debt_chk: SENIOR FACILITY CHECKS
+
+  /// @label Senior facility - not repaid by maturity
+  /// @unit check
+  calc chk_sd_repaid = IF(ABS(SUMIFS({{sd_bal_close[:]}},{{tim_lst_prd_flag[:]}},1))>{{cst_chk_tol}},1,0)
+
+  /// @label Senior facility - DSCR below target
+  /// @unit alert
+  calc chk_sd_dscr_floor = IF(MAX({{sd_ds_excess[:]}})>{{cst_chk_tol}},1,0)
+
+
+# h_debt_jd_size: JUNIOR FACILITY SIZING
+
+  ## h_debt_jd_window: Repayment Window
+
+    /// @label Junior facility - repayment period flag
+    /// @unit flag
+    calc[t1] jd_rpmt_flag = {{tim_ops_flag[n]}}*IF({{tim_prd_end[n]}}<=EDATE({{tim_con_end_dt}},{{jd_tenor_yrs}}*{{cst_mos_yr}}),1,0)
+
+    /// @label Junior facility - repayment period counter
+    /// @unit counter
+    calc[t1] jd_rpmt_cntr = {{jd_rpmt_cntr[n-1]}}+{{jd_rpmt_flag[n]}}
+
+    /// @label Junior facility - number of repayment periods
+    /// @unit counter
+    calc jd_rpmt_prds = SUM({{jd_rpmt_flag[:]}})
+
+    /// @label Junior facility - maturity period flag
+    /// @unit flag
+    calc[t1] jd_mat_flag = IF({{jd_rpmt_prds}}=0,{{tim_lst_prd_flag[n]}},{{jd_rpmt_flag[n]}}*IF({{jd_rpmt_cntr[n]}}={{jd_rpmt_prds}},1,0))
+
+  ## h_debt_jd_sched: Amount and Scheduled Principal
+
+    /// @label Junior facility - amount
+    /// @unit EUR 000s
+    calc jd_amount = {{jd_amount_pct}}*{{fnd_req_total}}
+
+    /// @label Junior facility - balance at COD
+    /// @unit EUR 000s
+    calc jd_bal_cod = SUM({{fnd_jd_draw[:]}})
+
+    /// @label Junior facility - scheduled principal
+    /// @unit EUR 000s
+    calc[t1] jd_prin_due = IF({{jd_rpmt_prds}}=0,0,{{jd_bal_cod}}/{{jd_rpmt_prds}})*{{jd_rpmt_flag[n]}}
+
+
+# h_debt_jd_int: JUNIOR FACILITY INTEREST
+
+  ## h_debt_jd_open: Opening Balances
+
+    /// @label Junior facility - opening balance
+    /// @unit EUR 000s
+    calc[t1] jd_bal_open = {{jd_bal_close[n-1]}}
+
+    /// @label Junior facility - opening interest arrears
+    /// @unit EUR 000s
+    calc[t1] jd_int_arr_open = {{jd_int_arr_close[n-1]}}
+
+    /// @label Junior facility - opening principal arrears
+    /// @unit EUR 000s
+    calc[t1] jd_prin_arr_open = {{jd_prin_arr_close[n-1]}}
+
+  ## h_debt_jd_charge: Interest Charges
+
+    /// @label Junior facility - interest during construction
+    /// @unit EUR 000s
+    calc[t1] jd_idc = {{jd_bal_open[n]}}*{{jd_rate}}*{{tim_dys_prd[n]}}/{{cst_dys_yr}}*{{tim_con_flag[n]}}
+
+    /// @label Junior facility - interest
+    /// @unit EUR 000s
+    calc[t1] jd_int = ({{jd_bal_open[n]}}+{{jd_int_arr_open[n]}})*{{jd_rate}}*{{tim_dys_prd[n]}}/{{cst_dys_yr}}*{{tim_ops_flag[n]}}
+
+
+# h_debt_jd_pay: JUNIOR FACILITY PAYMENTS
+
+  ## h_debt_jd_int_pay: Interest Paid and Arrears
+
+    /// @label Junior facility - interest paid
+    /// @unit EUR 000s
+    calc[t1] jd_int_paid = MIN({{jd_int[n]}}+{{jd_int_arr_open[n]}},MAX(0,{{wf_cash_for_jd[n]}}))
+
+    /// @label Junior facility - closing interest arrears
+    /// @unit EUR 000s
+    calc[t1] jd_int_arr_close = {{jd_int_arr_open[n]}}+{{jd_int[n]}}-{{jd_int_paid[n]}}
+
+  ## h_debt_jd_prin_pay: Principal Paid and Arrears
+
+    /// @label Junior facility - principal paid
+    /// @unit EUR 000s
+    calc[t1] jd_prin_paid = MIN({{jd_prin_due[n]}}+{{jd_prin_arr_open[n]}},MAX(0,{{wf_cash_for_jd[n]}})-{{jd_int_paid[n]}})
+
+    /// @label Junior facility - closing principal arrears
+    /// @unit EUR 000s
+    calc[t1] jd_prin_arr_close = {{jd_prin_arr_open[n]}}+{{jd_prin_due[n]}}-{{jd_prin_paid[n]}}
+
+  ## h_debt_jd_bal: Closing Balance and Debt Service
+
+    /// @label Junior facility - closing balance
+    /// @unit EUR 000s
+    calc[t1] jd_bal_close = {{jd_bal_open[n]}}+{{fnd_jd_draw[n]}}-{{jd_prin_paid[n]}}
+
+    /// @label Junior facility - debt service paid
+    /// @unit EUR 000s
+    calc[t1] jd_ds = {{jd_int_paid[n]}}+{{jd_prin_paid[n]}}
+
+
+# h_debt_jd_chk: JUNIOR FACILITY CHECKS
+
+  /// @label Junior facility - schedule not complete at maturity
+  /// @unit check
+  calc chk_jd_repaid = IF(ABS(SUMIFS({{jd_bal_close[:]}},{{jd_mat_flag[:]}},1)-SUMIFS({{jd_prin_arr_close[:]}},{{jd_mat_flag[:]}},1))>{{cst_chk_tol}},1,0)
+
+  /// @label Junior facility - arrears outstanding
+  /// @unit alert
+  calc chk_jd_alert_arrears = IF(MAX({{jd_int_arr_close[:]}})+MAX({{jd_prin_arr_close[:]}})>{{cst_chk_tol}},1,0)

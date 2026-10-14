@@ -1,0 +1,131 @@
+// Reserves — decompiler preview: structure, names and derived calc bodies are live output; non-compliant and underived rows render as `raw` lines (coordinates + cell payloads, verbatim)
+  /// @label Error chks
+  /// @slot error-checks
+  calc res_error_chks = {{total_checks}}  // link
+
+  /// @label Model period ending
+  /// @slot model-period-ending
+  calc[t1] res_mdl_prd_end = {{tim_prd_end[n]}}  // link
+
+  /// @label Alerts
+  /// @slot alerts
+  calc res_alerts = {{total_alerts}}  // link
+
+  /// @label Timeline label
+  /// @slot timeline-label
+  calc[t1] res_tmln_label = {{tim_tmln_label[n]}}  // link
+
+  /// @label Financial year
+  /// @slot contract-year
+  calc[t1] res_fin_yr = {{tim_fin_yr[n]}}  // link
+
+  /// @label Model column counter
+  /// @slot column-counter
+  calc[t1] res_column_counter = {{tim_prd_cntr[n]}}  // link
+
+
+# h_res_dsra_req: DEBT SERVICE RESERVE REQUIREMENT
+
+  /// @label DSRA - senior debt service in the cover period
+  /// @unit EUR 000s
+  calc[t1] res_ds_cover_req = SUMIFS({{sd_ds_paste[:]}},{{tim_prd_end[:]}},">"&{{tim_prd_end[n]}},{{tim_prd_end[:]}},"<="&EOMONTH({{tim_prd_end[n]}},{{res_dsra_months}}))*({{tim_con_end_flag[n]}}+{{tim_ops_flag[n]}})
+
+  /// @label DSRA - balance target
+  /// @unit EUR 000s
+  calc[t1] res_dsra_target = IF({{res_dsrf_switch}}={{cst_dsrf_facility}},0,{{res_ds_cover_req[n]}})
+
+  /// @label DSRA - initial funding at construction end
+  /// @unit EUR 000s
+  calc[t1] res_dsra_initial_fund = {{res_dsra_target[n]}}*{{tim_con_end_flag[n]}}
+
+  /// @label DSRF - fee on the facility
+  /// @unit EUR 000s
+  calc[t1] res_dsrf_fee = IF({{res_dsrf_switch}}={{cst_dsrf_facility}},{{res_ds_cover_req[n-1]}}*{{res_dsrf_fee_pct}}*{{tim_dys_prd[n]}}/{{cst_dys_yr}},0)
+
+
+# h_res_dsra: DEBT SERVICE RESERVE ACCOUNT
+
+  ## h_res_dsra_draw: Opening Balance and Shortfall Draw
+
+    /// @label DSRA - opening balance
+    /// @unit EUR 000s
+    calc[t1] res_dsra_bal_open = {{res_dsra_bal[n-1]}}
+
+    /// @label DSRA - draw for senior debt service shortfall
+    /// @unit EUR 000s
+    calc[t1] res_dsra_draw = MIN({{res_dsra_bal_open[n]}},{{sd_ds[n]}},MAX(0,{{sd_ds[n]}}-{{wf_cfads[n]}}))
+
+    /// @label DSRA - balance after initial funding and draw
+    /// @unit EUR 000s
+    calc[t1] res_dsra_bal_mid = {{res_dsra_bal_open[n]}}+{{res_dsra_initial_fund[n]}}-{{res_dsra_draw[n]}}
+
+  ## h_res_dsra_move: Release, Deposit and Closing Balance
+
+    /// @label DSRA - release of balance above target
+    /// @unit EUR 000s
+    calc[t1] res_dsra_release = MAX(0,{{res_dsra_bal_mid[n]}}-{{res_dsra_target[n]}})
+
+    /// @label DSRA - deposit towards target
+    /// @unit EUR 000s
+    calc[t1] res_dsra_deposit = MIN(MAX(0,{{res_dsra_target[n]}}-{{res_dsra_bal_mid[n]}}),MAX(0,{{wf_cash_for_dsra[n]}}))
+
+    /// @label DSRA - closing balance
+    /// @unit EUR 000s
+    calc[t1] res_dsra_bal = {{res_dsra_bal_mid[n]}}-{{res_dsra_release[n]}}+{{res_dsra_deposit[n]}}
+
+
+# h_res_mra_req: MAINTENANCE RESERVE REQUIREMENT
+
+  /// @label Maintenance cost - nominal
+  /// @unit EUR 000s
+  calc[t1] res_maint_cost_nom = {{res_maint_cost[n]}}*{{idx_opx_factor[n]}}*{{tim_ops_flag[n]}}
+
+  /// @label MRA - balance target
+  /// @unit EUR 000s
+  calc[t1] res_mra_target = MAX(0,{{res_mra_cover}}*SUMIFS({{res_maint_cost_nom[:]}},{{tim_prd_end[:]}},">"&{{tim_prd_end[n]}},{{tim_prd_end[:]}},"<="&EOMONTH({{tim_prd_end[n]}},{{res_mra_months}})))*{{tim_ops_flag[n]}}
+
+
+# h_res_mra: MAINTENANCE RESERVE ACCOUNT
+
+  ## h_res_mra_draw: Opening Balance and Maintenance Draw
+
+    /// @label MRA - opening balance
+    /// @unit EUR 000s
+    calc[t1] res_mra_bal_open = {{res_mra_bal[n-1]}}
+
+    /// @label MRA - draw for maintenance cost
+    /// @unit EUR 000s
+    calc[t1] res_mra_draw = MIN({{res_mra_bal_open[n]}},MAX(0,{{res_maint_cost_nom[n]}}))
+
+    /// @label Maintenance cost - not covered by MRA
+    /// @unit EUR 000s
+    calc[t1] res_maint_unfunded = {{res_maint_cost_nom[n]}}-{{res_mra_draw[n]}}
+
+    /// @label MRA - balance after draw
+    /// @unit EUR 000s
+    calc[t1] res_mra_bal_mid = {{res_mra_bal_open[n]}}-{{res_mra_draw[n]}}
+
+  ## h_res_mra_move: Release, Deposit and Closing Balance
+
+    /// @label MRA - release of balance above target
+    /// @unit EUR 000s
+    calc[t1] res_mra_release = MAX(0,{{res_mra_bal_mid[n]}}-{{res_mra_target[n]}})
+
+    /// @label MRA - deposit towards target
+    /// @unit EUR 000s
+    calc[t1] res_mra_deposit = MIN(MAX(0,{{res_mra_target[n]}}-{{res_mra_bal_mid[n]}}),MAX(0,{{wf_cash_for_mra[n]}}))
+
+    /// @label MRA - closing balance
+    /// @unit EUR 000s
+    calc[t1] res_mra_bal = {{res_mra_bal_mid[n]}}-{{res_mra_release[n]}}+{{res_mra_deposit[n]}}
+
+
+# h_res_chk: RESERVE CHECKS
+
+  /// @label DSRA - balance negative
+  /// @unit check
+  calc chk_dsra_nonneg = IF(MIN({{res_dsra_bal[:]}})<-{{cst_chk_tol}},1,0)
+
+  /// @label MRA - balance negative
+  /// @unit check
+  calc chk_mra_nonneg = IF(MIN({{res_mra_bal[:]}})<-{{cst_chk_tol}},1,0)

@@ -1,10 +1,10 @@
 schema = 1
 
-# The FAST starter's model — the build skill's step-2 model.toml, the model
-# every `cellori-dev new` begins from. make_starter.ps1 lands it on the hybrid
-# start template, pushes once, and ships the result as
-# standards/fast/fast_starter_v01.xlsm. Minimal on purpose: every extra key is
-# a rung of the refusal ladder (cellori-step-build-from-plan, step 2).
+# The worked model: a complete generic project-finance model on the FAST
+# starter's hybrid spine (monthly construction, quarterly operations). It
+# begins from `cellori-desktop new`'s model.toml; the keys added here are the
+# model's facts (span, north stars, tab order), the scenario ribbon and the
+# three solver pairs that close its loops.
 
 [standard]
 uid = "fast"                                 # push writes rev/hash here itself
@@ -13,7 +13,9 @@ hash = "sha256:8e6d4b4b738f36728babcd523eb9f110bc317b7d8bb309f0321c2e452b6d718b"
 
 [workbook]
 header_scheme         = "quarterly-banner"   # a monthly or hybrid spine wears the quarterly banner
-timeseries_end_column = "GJ"                 # the hybrid template's own span; a model sets J + periods - 1
+timeseries_end_column = "EG"                 # 128 periods: J + 127 (24 monthly pre-close/construction + 100 quarterly operating + 4 quarterly post-ops)
+north_stars           = ["rr_eq_irr", "rr_proj_irr", "rr_dscr_min", "rr_llcr_min", "fnd_sd_amount", "fnd_eq_amount"]
+sheet_order           = ["InpC", "InpS", "Time", "Cons", "Ops", "Assets", "Debt", "Reserves", "Waterfall", "Tax", "Equity", "FS", "Check", "Solve"]
 
 # The scenario ribbon on InpC: three base cases in K:M (the client's case is
 # 1) and two scenarios in O:P; J, N and Q are the bands' structural blanks.
@@ -33,3 +35,59 @@ name = "InpC"
   base_case_cols     = "K:M"
   scenario_case_cols = "O:P"
   infrastructure     = ["2:9", "I:I"]
+
+# The construction loop: draws -> senior balance -> IDC and
+# fees -> funding requirement. Cons reads the pasted requirement vector
+# (fnd_req_paste) and the pasted senior debt capacity (sd_capacity_paste); the
+# solver copies fnd_req and sd_capacity into them until chk_solver reads 0.
+# The operations loops: CFADS is after tax, so the sculpting cover
+# reads the pasted capacity (Debt's sd_dscr_eff), and the reserves' forward
+# cover requirement reads the pasted senior debt service (sd_ds_paste), which
+# breaks every loop through the DSRA target, the DSRF fee (tax-deductible),
+# the junior facility and the cash sweep.
+[[sheet]]
+name = "Solve"
+type = "solve"
+
+[solver]
+sheet = "Solve"
+
+[[solver.master_check]]
+name    = "chk_solver"
+label   = "Solver - master check"
+unit    = "check"
+formula = "SUM(§{{fnd_req_chk_2}}, {{sd_capacity_chk}}, {{sd_ds_chk_2}}§)"
+
+[[solver.step]]
+name     = "master"
+converge = "chk_solver"
+
+[[solver.step.pair]]
+copy  = "fnd_req"
+paste = "fnd_req_paste"
+label = "Funding requirement - solver paste"
+unit  = "EUR 000s"
+checks = [
+  { name = "fnd_req_chk", t1 = true, label = "Funding requirement - solver check", unit = "check", formula = "ABS({{fnd_req[n]}}-{{fnd_req_paste[n]}})" },
+  { name = "fnd_req_chk_2", label = "Funding requirement - solver check", unit = "check", formula = "IF(SUM({{fnd_req_chk[:]}})>{{cst_solve_tol}},1,0)" },
+]
+
+[[solver.step.pair]]
+copy   = "sd_capacity"
+paste  = "sd_capacity_paste"
+label  = "Senior facility - debt capacity solver paste"
+unit   = "EUR 000s"
+scalar = true
+checks = [
+  { name = "sd_capacity_chk", label = "Senior facility - debt capacity solver check", unit = "check", formula = "IF(ABS({{sd_capacity}}-{{sd_capacity_paste}})>{{cst_solve_tol}},1,0)" },
+]
+
+[[solver.step.pair]]
+copy  = "sd_ds"
+paste = "sd_ds_paste"
+label = "Senior facility - debt service solver paste"
+unit  = "EUR 000s"
+checks = [
+  { name = "sd_ds_chk", t1 = true, label = "Senior facility - debt service solver check", unit = "check", formula = "ABS({{sd_ds[n]}}-{{sd_ds_paste[n]}})" },
+  { name = "sd_ds_chk_2", label = "Senior facility - debt service solver check", unit = "check", formula = "IF(SUM({{sd_ds_chk[:]}})>{{cst_solve_tol}},1,0)" },
+]

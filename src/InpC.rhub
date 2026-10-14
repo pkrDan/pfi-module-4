@@ -4,11 +4,11 @@
 
   /// @label First date of time rulers
   /// @unit date
-  input tim_frst_prd_strt = []  // active: 46023
+  input tim_frst_prd_strt = []  // active: 46388
 
   /// @label Financial year end date of first model period
   /// @unit date
-  input tim_frst_fy_end = []  // active: 46387
+  input tim_frst_fy_end = []  // active: 46752
 
   /// @label Length of construction period
   /// @unit months
@@ -28,15 +28,250 @@
 
   /// @label Financial close date
   /// @unit date
-  input tim_fc_dt = []  // active: 46203
+  input tim_fc_dt = []  // active: 46477
 
   /// @label Construction period length
   /// @unit months
-  input tim_con_len_mos = []  // active: 24
+  input tim_con_len_mos = []  // active: 21
 
   /// @label Operational period
   /// @unit years
   input tim_ops_len_yrs = []  // active: 25
+
+
+# h_inpc_cons: CAPITAL COST ASSUMPTIONS
+
+  ## h_inpc_cpx: Packages, Contingency and Development
+
+    /// @label Capex package 1 - amount
+    /// @unit EUR 000s
+    input cpx_pkg1_amt = []  // active: 120000
+
+    /// @label Capex package 2 - amount
+    /// @unit EUR 000s
+    input cpx_pkg2_amt = []  // active: 80000
+
+    /// @label Capex package 3 - amount
+    /// @unit EUR 000s
+    input cpx_pkg3_amt = []  // active: 45000
+
+    /// @label Capex package 4 - amount
+    /// @unit EUR 000s
+    input cpx_pkg4_amt = []  // active: 25000
+
+    /// @label Contingency - share of packages
+    /// @unit %
+    input cpx_cont_pct = []  // active: 0.05
+
+    /// @label Development costs - amount at financial close
+    /// @unit EUR 000s
+    input cpx_dev_amt = []  // active: 8000
+
+
+# h_inpc_ops: OPERATIONS PHASE ASSUMPTIONS
+
+  ## h_inpc_rev: Revenue
+
+    /// @label Revenue A - annual amount
+    /// @unit EUR 000s
+    input rev_a_annual = []  // active: 36000
+
+    /// @label Revenue B - annual amount
+    /// @unit EUR 000s
+    input rev_b_annual = []  // active: 12000
+
+  ## h_inpc_opx: Operating Costs
+
+    /// @label Opex - fixed annual amount
+    /// @unit EUR 000s
+    input opx_fixed_annual = []  // active: 10000
+
+    /// @label Opex - variable share of revenue
+    /// @unit %
+    input opx_var_pct = []  // active: 0.05
+
+  ## h_inpc_idx: Indexation
+
+    /// @label Indexation - base date
+    /// @unit date
+    input idx_base_dt = []  // active: 46388
+
+    /// @label Revenue index - annual rate
+    /// @unit % p.a.
+    input idx_rev_rate = []  // active: 0.02
+
+    /// @label Opex index - annual rate
+    /// @unit % p.a.
+    input idx_opx_rate = []  // active: 0.025
+
+  ## h_inpc_wc: Working Capital
+
+    /// @label Receivables - collection days
+    /// @unit days
+    input wc_rcv_days = []  // active: 30
+
+    /// @label Payables - payment days
+    /// @unit days
+    input wc_pay_days = []  // active: 45
+
+
+# h_inpc_ast: ASSET ASSUMPTIONS
+
+  ## h_inpc_dep: Depreciation
+
+    /// @label Fixed assets - accounting life
+    /// @unit years
+    input fa_acc_life_yrs = []  // active: 25
+
+    /// @label Fixed assets - tax depreciation rate
+    /// @unit % p.a.
+    input fa_tax_db_rate = []  // active: 0.18
+
+
+# h_inpc_fin: FINANCING ASSUMPTIONS
+
+  ## h_inpc_sd: Senior Facility
+
+    /// @label Senior facility - target DSCR
+    /// @unit ratio
+    input sd_target_dscr = []  // active: 1.3
+
+    /// @label Senior facility - repayment tenor
+    /// @unit years
+    input sd_tenor_yrs = []  // active: 18
+
+    /// @label Senior facility - interest rate
+    /// @unit % p.a.
+    input sd_rate = []  // active: 0.055
+
+    /// @label Senior facility - repayment method
+    /// @unit switch
+    input sd_rpmt_method = []  // active: 1
+
+    /// @label Senior facility - upfront fee rate
+    /// @unit %
+    input sd_upfront_fee_pct = []  // active: 0.015
+
+    /// @label Senior facility - commitment fee on undrawn
+    /// @unit % p.a.
+    input sd_commit_fee_pct = []  // active: 0.006
+
+  ## h_inpc_fnd: Funding Structure
+
+    /// @label Funding - maximum gearing
+    /// @unit %
+    input fnd_max_gearing = []  // active: 0.7
+
+    /// @label Funding - draw order
+    /// @unit switch
+    input fnd_draw_order = []  // active: 1
+
+  ## h_inpc_vat: VAT Facility
+
+    /// @label VAT - rate on capex
+    /// @unit %
+    input vat_rate = []  // active: 0.2
+
+    /// @label VAT - refund lag (minimum 1 day)
+    /// @unit days
+    input vat_refund_lag_days = []  // active: 90
+
+    /// @label VAT facility - interest rate
+    /// @unit % p.a.
+    input vat_fac_rate = []  // active: 0.04
+
+  ## h_inpc_jd: Junior Facility
+
+    /// @label Junior facility - share of funding requirement
+    /// @unit %
+    input jd_amount_pct = []  // active: 0.08
+
+    /// @label Junior facility - interest rate
+    /// @unit % p.a.
+    input jd_rate = []  // active: 0.09
+
+    /// @label Junior facility - repayment tenor
+    /// @unit years
+    input jd_tenor_yrs = []  // active: 12
+
+  ## h_inpc_res: Reserve Accounts
+
+    /// @label DSRA - debt service cover period
+    /// @unit months
+    input res_dsra_months = []  // active: 6
+
+    /// @label DSRF - facility in place of cash DSRA
+    /// @unit switch
+    input res_dsrf_switch = []  // active: 0
+
+    /// @label DSRF - annual fee on the facility
+    /// @unit % p.a.
+    input res_dsrf_fee_pct = []  // active: 0.01
+
+    /// @label MRA - maintenance cover period
+    /// @unit months
+    input res_mra_months = []  // active: 12
+
+    /// @label MRA - share of upcoming maintenance covered
+    /// @unit %
+    input res_mra_cover = []  // active: 1
+
+  ## h_inpc_wf: Distributions and Cash Sweep
+
+    /// @label Distributions - minimum cash balance
+    /// @unit EUR 000s
+    input wf_min_cash = []  // active: 0
+
+    /// @label Distributions - lock-up DSCR (historical 12 months)
+    /// @unit ratio
+    input wf_lockup_dscr = []  // active: 1.15
+
+    /// @label Cash sweep - share of cash after junior debt service
+    /// @unit %
+    input wf_sweep_pct = []  // active: 0
+
+    /// @label Cash sweep - full sweep while locked up
+    /// @unit switch
+    input wf_sweep_on_lockup = []  // active: 1
+
+  ## h_inpc_eq: Shareholder Funding and Returns
+
+    /// @label Shareholder loan - share of equity funding
+    /// @unit %
+    input eq_shl_pct = []  // active: 0.8
+
+    /// @label Shareholder loan - annual coupon
+    /// @unit % p.a.
+    input eq_shl_rate = []  // active: 0.07
+
+    /// @label Shareholder loan - construction interest rolled up
+    /// @unit switch
+    input eq_shl_rollup = []  // active: 1
+
+    /// @label Equity - NPV discount rate
+    /// @unit % p.a.
+    input eq_disc_rate = []  // active: 0.08
+
+
+# h_inpc_tax: CORPORATE TAX ASSUMPTIONS
+
+  ## h_inpc_tax_corp: Rate, Interest Cap and Losses
+
+    /// @label Tax - corporate tax rate
+    /// @unit %
+    input tax_rate = []  // active: 0.25
+
+    /// @label Tax - interest cap share of tax EBITDA
+    /// @unit %
+    input tax_int_cap_pct = []  // active: 0.3
+
+    /// @label Tax losses - expiry period
+    /// @unit years
+    input tax_loss_expiry_yrs = []  // active: 8
+
+    /// @label Tax losses - maximum share of profit offset
+    /// @unit %
+    input tax_loss_offset_pct = []  // active: 0.7
 
 
 # h_inpc_constants: MODEL TECHNICAL INPUTS - DO NOT CHANGE
@@ -44,6 +279,76 @@
   /// @label Months in year
   /// @unit months
   input cst_mos_yr = []  // active: 12
+
+  /// @label Days per year (interest day count)
+  /// @unit days
+  input cst_dys_yr = []  // active: 365
+
+  /// @label Check tolerance
+  /// @unit EUR 000s
+  input cst_chk_tol = []  // active: 0.001
+
+  /// @label Solver tolerance
+  /// @unit EUR 000s
+  input cst_solve_tol = []  // active: 0.00000001
+
+  /// @label XIRR - seed outflow on the first period
+  /// @unit EUR 000s
+  input cst_xirr_seed = []  // active: -0.000001
+
+  ## h_inpc_rpmt_method: Repayment Method Legend
+
+    /// @label Repayment method - sculpted
+    /// @unit switch
+    input cst_rpmt_method_sculpt = []  // active: 1
+
+    /// @label Repayment method - annuity
+    /// @unit switch
+    input cst_rpmt_method_annuity = []  // active: 2
+
+    /// @label Repayment method - straight line
+    /// @unit switch
+    input cst_rpmt_method_straight = []  // active: 3
+
+  ## h_inpc_draw_order: Draw Order Legend
+
+    /// @label Draw order - equity first
+    /// @unit switch
+    input cst_draw_order_eq_first = []  // active: 1
+
+    /// @label Draw order - pro rata
+    /// @unit switch
+    input cst_draw_order_pro_rata = []  // active: 2
+
+  ## h_inpc_dsrf_legend: DSRF Switch Legend
+
+    /// @label DSRF switch - cash-funded DSRA
+    /// @unit switch
+    input cst_dsrf_cash = []  // active: 0
+
+    /// @label DSRF switch - facility replaces cash DSRA
+    /// @unit switch
+    input cst_dsrf_facility = []  // active: 1
+
+  ## h_inpc_sweep_legend: Lock-up Sweep Legend
+
+    /// @label Lock-up sweep - off
+    /// @unit switch
+    input cst_sweep_lockup_off = []  // active: 0
+
+    /// @label Lock-up sweep - on
+    /// @unit switch
+    input cst_sweep_lockup_on = []  // active: 1
+
+  ## h_inpc_shl_legend: Shareholder Loan Rollup Legend
+
+    /// @label Shareholder loan rollup - interest accrued unpaid
+    /// @unit switch
+    input cst_shl_rollup_off = []  // active: 0
+
+    /// @label Shareholder loan rollup - interest capitalised
+    /// @unit switch
+    input cst_shl_rollup_on = []  // active: 1
 
   ## h_inpc_tmln_label: Timeline label
 

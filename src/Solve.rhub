@@ -1,0 +1,72 @@
+// READ-ONLY — a rendering of the workbook's solve sheet for reference.
+// The solver is declared in model.toml [solver]; edits here are ignored
+// and push rebuilds this sheet from the config.
+// Solve — decompiler preview: structure, names and derived calc bodies are live output; non-compliant and underived rows render as `raw` lines (coordinates + cell payloads, verbatim)
+  /// @label Error chks
+  /// @slot error-checks
+  calc solve_error_chks = {{total_checks}}  // link
+
+  /// @label Model period ending
+  /// @slot model-period-ending
+  calc[t1] solve_mdl_prd_end = {{tim_prd_end[n]}}  // link
+
+  /// @label Alerts
+  /// @slot alerts
+  calc solve_alerts = {{total_alerts}}  // link
+
+  /// @label Timeline label
+  /// @slot timeline-label
+  calc[t1] solve_tmln_label = {{tim_tmln_label[n]}}  // link
+
+  /// @label Financial year
+  /// @slot contract-year
+  calc[t1] solve_cntr_yr = {{tim_fin_yr[n]}}  // link
+
+  /// @label Model column counter
+  /// @slot column-counter
+  calc[t1] solve_column_counter = {{tim_prd_cntr[n]}}  // link
+
+
+# h_calc_line_items: CALC LINE ITEMS
+
+
+# h_paste_line_items: PASTE LINE ITEMS
+
+  /// @label Funding requirement - solver paste
+  /// @unit EUR 000s
+  input[t1] fnd_req_paste = []
+
+  /// @label Senior facility - debt capacity solver paste
+  /// @unit EUR 000s
+  input sd_capacity_paste = []  // active: 338693.4027328845
+
+  /// @label Senior facility - debt service solver paste
+  /// @unit EUR 000s
+  input[t1] sd_ds_paste = []
+
+
+# h_checks: CHECKS
+
+  /// @label Funding requirement - solver check
+  /// @unit check
+  calc fnd_req_chk_2 = IF(SUM({{fnd_req_chk[:]}})>{{cst_solve_tol}},1,0)
+
+  /// @label Funding requirement - solver check
+  /// @unit check
+  calc[t1] fnd_req_chk = ABS({{fnd_req[n]}}-{{fnd_req_paste[n]}})
+
+  /// @label Senior facility - debt capacity solver check
+  /// @unit check
+  calc sd_capacity_chk = IF(ABS({{sd_capacity}}-{{sd_capacity_paste}})>{{cst_solve_tol}},1,0)
+
+  /// @label Senior facility - debt service solver check
+  /// @unit check
+  calc sd_ds_chk_2 = IF(SUM({{sd_ds_chk[:]}})>{{cst_solve_tol}},1,0)
+
+  /// @label Senior facility - debt service solver check
+  /// @unit check
+  calc[t1] sd_ds_chk = ABS({{sd_ds[n]}}-{{sd_ds_paste[n]}})
+
+  /// @label Solver - master check
+  /// @unit check
+  calc chk_solver = SUM(§{{fnd_req_chk_2}}, {{sd_capacity_chk}}, {{sd_ds_chk_2}}§)

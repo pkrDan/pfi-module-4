@@ -1,0 +1,147 @@
+// Tax — decompiler preview: structure, names and derived calc bodies are live output; non-compliant and underived rows render as `raw` lines (coordinates + cell payloads, verbatim)
+  /// @label Error chks
+  /// @slot error-checks
+  calc tax_error_chks = {{total_checks}}  // link
+
+  /// @label Model period ending
+  /// @slot model-period-ending
+  calc[t1] tax_mdl_prd_end = {{tim_prd_end[n]}}  // link
+
+  /// @label Alerts
+  /// @slot alerts
+  calc tax_alerts = {{total_alerts}}  // link
+
+  /// @label Timeline label
+  /// @slot timeline-label
+  calc[t1] tax_tmln_label = {{tim_tmln_label[n]}}  // link
+
+  /// @label Financial year
+  /// @slot contract-year
+  calc[t1] tax_fin_yr = {{tim_fin_yr[n]}}  // link
+
+  /// @label Model column counter
+  /// @slot column-counter
+  calc[t1] tax_column_counter = {{tim_prd_cntr[n]}}  // link
+
+
+# h_tax_int: INTEREST CAP
+
+  ## h_tax_int_cap: Tax EBITDA and Interest Cap
+
+    /// @label Tax EBITDA - after maintenance expensed
+    /// @unit EUR 000s
+    calc[t1] tax_ebitda = ({{ops_ebitda[n]}}-{{res_maint_cost_nom[n]}})*{{tim_ops_flag[n]}}
+
+    /// @label Interest expense - for tax
+    /// @unit EUR 000s
+    calc[t1] tax_int_exp = ({{sd_int[n]}}+{{jd_int[n]}}+{{vat_fac_int_ops[n]}}+{{fa_fin_amort[n]}}+{{res_dsrf_fee[n]}})*{{tim_ops_flag[n]}}
+
+    /// @label Interest cap - allowance
+    /// @unit EUR 000s
+    calc[t1] tax_int_cap = MAX(0,{{tax_ebitda[n]}})*{{tax_int_cap_pct}}
+
+  ## h_tax_int_cf: Disallowed Interest Carried Forward
+
+    /// @label Disallowed interest - opening balance
+    /// @unit EUR 000s
+    calc[t1] tax_int_cf_open = {{tax_int_cf_close[n-1]}}
+
+    /// @label Disallowed interest - added above cap
+    /// @unit EUR 000s
+    calc[t1] tax_int_cf_add = MAX(0,{{tax_int_exp[n]}}-{{tax_int_cap[n]}})
+
+    /// @label Disallowed interest - used within headroom
+    /// @unit EUR 000s
+    calc[t1] tax_int_cf_used = MIN({{tax_int_cf_open[n]}},MAX(0,{{tax_int_cap[n]}}-{{tax_int_exp[n]}}))
+
+    /// @label Disallowed interest - lapsed at operations end
+    /// @unit EUR 000s
+    calc[t1] tax_int_cf_lapse = ({{tax_int_cf_open[n]}}+{{tax_int_cf_add[n]}}-{{tax_int_cf_used[n]}})*{{tim_ops_lst_flag[n]}}
+
+    /// @label Disallowed interest - closing balance
+    /// @unit EUR 000s
+    calc[t1] tax_int_cf_close = {{tax_int_cf_open[n]}}+{{tax_int_cf_add[n]}}-{{tax_int_cf_used[n]}}-{{tax_int_cf_lapse[n]}}
+
+    /// @label Interest - deductible
+    /// @unit EUR 000s
+    calc[t1] tax_int_deduct = MIN({{tax_int_exp[n]}},{{tax_int_cap[n]}})+{{tax_int_cf_used[n]}}
+
+
+# h_tax_loss: TAX LOSSES
+
+  ## h_tax_loss_use: Generated and Used
+
+    /// @label Taxable profit - before losses
+    /// @unit EUR 000s
+    calc[t1] tax_pre_loss = {{tax_ebitda[n]}}-{{fa_tax_dep[n]}}-{{tax_int_deduct[n]}}
+
+    /// @label Tax losses - available at start of period
+    /// @unit EUR 000s
+    calc[t1] tax_loss_avail = {{tax_loss_close[n-1]}}
+
+    /// @label Tax losses - generated
+    /// @unit EUR 000s
+    calc[t1] tax_loss_gen = MAX(0,-{{tax_pre_loss[n]}})
+
+    /// @label Tax losses - used
+    /// @unit EUR 000s
+    calc[t1] tax_loss_used = MIN({{tax_loss_avail[n]}},MAX(0,{{tax_pre_loss[n]}})*{{tax_loss_offset_pct}})
+
+  ## h_tax_loss_exp: Expiry and Balance
+
+    /// @label Tax losses - expired by age
+    /// @unit EUR 000s
+    calc[t1] tax_loss_exp = MAX(0,SUMIFS({{tax_loss_gen[:n]}},{{tim_prd_end[:n]}},"<="&EDATE({{tim_prd_end[n]}},-{{cst_mos_yr}}*{{tax_loss_expiry_yrs}}))-SUM({{tax_loss_used[:n]}})-{{tax_loss_used[n]}}-SUM({{tax_loss_exp[:n]}}))*{{tim_ops_flag[n]}}
+
+    /// @label Tax losses - lapsed at operations end
+    /// @unit EUR 000s
+    calc[t1] tax_loss_lapse = ({{tax_loss_avail[n]}}+{{tax_loss_gen[n]}}-{{tax_loss_used[n]}}-{{tax_loss_exp[n]}})*{{tim_ops_lst_flag[n]}}
+
+    /// @label Tax losses - closing balance
+    /// @unit EUR 000s
+    calc[t1] tax_loss_close = {{tax_loss_avail[n]}}+{{tax_loss_gen[n]}}-{{tax_loss_used[n]}}-{{tax_loss_exp[n]}}-{{tax_loss_lapse[n]}}
+
+
+# h_tax_pay: TAX PAYABLE
+
+  /// @label Taxable profit - after losses
+  /// @unit EUR 000s
+  calc[t1] tax_taxable = MAX(0,{{tax_pre_loss[n]}}-{{tax_loss_used[n]}})
+
+  /// @label Tax - payable
+  /// @unit EUR 000s
+  calc[t1] tax_payable = {{tax_taxable[n]}}*{{tax_rate}}
+
+
+# h_tax_dt: DEFERRED TAX
+
+  /// @label Deferred tax - balance
+  /// @unit EUR 000s
+  calc[t1] tax_dt_bal = {{tax_rate}}*({{fa_nbv[n]}}-{{fa_twdv[n]}})-{{tax_rate}}*{{tax_loss_close[n]}}-{{tax_rate}}*{{tax_int_cf_close[n]}}
+
+  /// @label Deferred tax - charge
+  /// @unit EUR 000s
+  calc[t1] tax_dt_chg = {{tax_dt_bal[n]}}-{{tax_dt_bal[n-1]}}
+
+
+# h_tax_chk: TAX CHECKS
+
+  /// @label Tax losses - balance negative
+  /// @unit check
+  calc chk_tax_loss_nonneg = IF(MIN({{tax_loss_close[:]}})<-{{cst_chk_tol}},1,0)
+
+  /// @label Deferred tax - charges differ from closing balance
+  /// @unit check
+  calc chk_tax_dt_ties = IF(ABS(SUM({{tax_dt_chg[:]}})-SUMIFS({{tax_dt_bal[:]}},{{tim_lst_prd_flag[:]}},1))>{{cst_chk_tol}},1,0)
+
+  /// @label Tax losses - expired unused
+  /// @unit alert
+  calc chk_tax_alert_loss_exp = IF(SUM({{tax_loss_exp[:]}})>{{cst_chk_tol}},1,0)
+
+  /// @label Deferred tax - not cleared at operations end
+  /// @unit check
+  calc chk_tax_dt_clear = IF(ABS(SUMIFS({{tax_dt_bal[:]}},{{tim_ops_lst_flag[:]}},1))+ABS(SUMIFS({{tax_dt_bal[:]}},{{tim_lst_prd_flag[:]}},1))>{{cst_chk_tol}},1,0)
+
+  /// @label Tax attributes - lapsed unused at operations end
+  /// @unit alert
+  calc chk_tax_alert_stranded = IF(SUM({{tax_loss_lapse[:]}})+SUM({{tax_int_cf_lapse[:]}})>{{cst_chk_tol}},1,0)

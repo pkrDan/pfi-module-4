@@ -1,0 +1,50 @@
+// InpS — decompiler preview: structure, names and derived calc bodies are live output; non-compliant and underived rows render as `raw` lines (coordinates + cell payloads, verbatim)
+  /// @label Error chks
+  /// @slot error-checks
+  calc inps_error_chks = {{total_checks}}  // link
+
+  /// @label Model period ending
+  /// @slot model-period-ending
+  calc[t1] inps_mdl_prd_end = {{tim_prd_end[n]}}  // link
+
+  /// @label Alerts
+  /// @slot alerts
+  calc inps_alerts = {{total_alerts}}  // link
+
+  /// @label Timeline label
+  /// @slot timeline-label
+  calc[t1] inps_tmln_label = {{tim_tmln_label[n]}}  // link
+
+  /// @label Financial year
+  /// @slot contract-year
+  calc[t1] inps_fin_yr = {{tim_fin_yr[n]}}  // link
+
+  /// @label Model column counter
+  /// @slot column-counter
+  calc[t1] inps_column_counter = {{tim_prd_cntr[n]}}  // link
+
+
+# h_inps_cons: CONSTRUCTION PROFILES
+
+  /// @label Capex package 1 - spend profile
+  /// @unit %
+  input[t1] cpx_pkg1_prof = []
+
+  /// @label Capex package 2 - spend profile
+  /// @unit %
+  input[t1] cpx_pkg2_prof = []
+
+  /// @label Capex package 3 - spend profile
+  /// @unit %
+  input[t1] cpx_pkg3_prof = []
+
+  /// @label Capex package 4 - spend profile
+  /// @unit %
+  input[t1] cpx_pkg4_prof = []
+
+
+# h_inps_maint: MAINTENANCE PROFILE
+
+  /// @label Maintenance cost - real terms
+  /// @unit EUR 000s
+  input[t1] res_maint_cost = []

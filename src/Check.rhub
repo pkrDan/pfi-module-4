@@ -12,15 +12,13 @@
 
 # h_chk_summary: CHECK SUMMARY
 
-// no checks registered — a summary scalar with @unit check registers one
   /// @label Total checks
   /// @unit check
-  calc total_checks = 0
+  calc total_checks = SUM(§{{chk_wc_closes}}, {{chk_cpx_prof1}}, {{chk_cpx_prof2}}, {{chk_cpx_prof3}}, {{chk_cpx_prof4}}, {{chk_fa_fin_zero}}, {{chk_sd_repaid}}, {{chk_fnd_sources_uses}}, {{chk_solver}}, {{chk_fnd_tranche_draws}}, {{chk_vat_rcv_clear}}, {{chk_vat_fac_repaid}}, {{chk_jd_repaid}}, {{chk_dsra_nonneg}}, {{chk_mra_nonneg}}, {{chk_tax_loss_nonneg}}, {{chk_tax_dt_ties}}, {{chk_wf_cash_closes}}, {{chk_eq_bal_closes}}, {{chk_bs_balance}}, {{chk_cash_ties}}, {{chk_re_ties}}, {{chk_tax_dt_clear}}, {{chk_wf_trapped_le_cash}}§)
 
 
 # h_alert_summary: ALERT SUMMARY
 
-// no alerts registered — a summary scalar with @unit alert registers one
   /// @label Total alerts
   /// @unit alert
-  calc total_alerts = 0
+  calc total_alerts = SUM(§{{chk_wf_cash_nonneg}}, {{chk_sd_dscr_floor}}, {{chk_jd_alert_arrears}}, {{chk_tax_alert_loss_exp}}, {{chk_wf_alert_lockup}}, {{chk_eq_alert_unreturned}}, {{chk_eq_alert_cash_left}}, {{chk_tax_alert_stranded}}, {{chk_fa_alert_writeoff}}§)

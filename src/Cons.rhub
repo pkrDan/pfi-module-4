@@ -1,0 +1,206 @@
+// Cons — decompiler preview: structure, names and derived calc bodies are live output; non-compliant and underived rows render as `raw` lines (coordinates + cell payloads, verbatim)
+  /// @label Error chks
+  /// @slot error-checks
+  calc cons_error_chks = {{total_checks}}  // link
+
+  /// @label Model period ending
+  /// @slot model-period-ending
+  calc[t1] cons_mdl_prd_end = {{tim_prd_end[n]}}  // link
+
+  /// @label Alerts
+  /// @slot alerts
+  calc cons_alerts = {{total_alerts}}  // link
+
+  /// @label Timeline label
+  /// @slot timeline-label
+  calc[t1] cons_tmln_label = {{tim_tmln_label[n]}}  // link
+
+  /// @label Financial year
+  /// @slot contract-year
+  calc[t1] cons_fin_yr = {{tim_fin_yr[n]}}  // link
+
+  /// @label Model column counter
+  /// @slot column-counter
+  calc[t1] cons_column_counter = {{tim_prd_cntr[n]}}  // link
+
+
+# h_cons_cpx: CONSTRUCTION COSTS
+
+  ## h_cons_pkg: Capex Packages
+
+    /// @label Capex package 1 - spend
+    /// @unit EUR 000s
+    calc[t1] cpx_pkg1 = {{cpx_pkg1_amt}}*{{cpx_pkg1_prof[n]}}*{{tim_con_flag[n]}}
+
+    /// @label Capex package 2 - spend
+    /// @unit EUR 000s
+    calc[t1] cpx_pkg2 = {{cpx_pkg2_amt}}*{{cpx_pkg2_prof[n]}}*{{tim_con_flag[n]}}
+
+    /// @label Capex package 3 - spend
+    /// @unit EUR 000s
+    calc[t1] cpx_pkg3 = {{cpx_pkg3_amt}}*{{cpx_pkg3_prof[n]}}*{{tim_con_flag[n]}}
+
+    /// @label Capex package 4 - spend
+    /// @unit EUR 000s
+    calc[t1] cpx_pkg4 = {{cpx_pkg4_amt}}*{{cpx_pkg4_prof[n]}}*{{tim_con_flag[n]}}
+
+  ## h_cons_oth: Contingency, Development and Total
+
+    /// @label Contingency - spend
+    /// @unit EUR 000s
+    calc[t1] cpx_cont = {{cpx_cont_pct}}*SUM(§{{cpx_pkg1[n]}}, {{cpx_pkg2[n]}}, {{cpx_pkg3[n]}}, {{cpx_pkg4[n]}}§)
+
+    /// @label Development costs - spend
+    /// @unit EUR 000s
+    calc[t1] cpx_dev = {{cpx_dev_amt}}*{{tim_fc_flag[n]}}
+
+    /// @label Capex - total
+    /// @unit EUR 000s
+    calc[t1] cpx_total = SUM(§{{cpx_pkg1[n]}}, {{cpx_pkg2[n]}}, {{cpx_pkg3[n]}}, {{cpx_pkg4[n]}}§)+{{cpx_cont[n]}}+{{cpx_dev[n]}}
+
+
+# h_cons_vat: VAT FACILITY
+
+  ## h_cons_vat_flow: VAT Paid and Refunded
+
+    /// @label VAT - paid on capex
+    /// @unit EUR 000s
+    calc[t1] vat_paid = ({{cpx_total[n]}}-{{cpx_dev[n]}})*{{vat_rate}}
+
+    /// @label VAT - refund received
+    /// @unit EUR 000s
+    calc[t1] vat_refund = SUMIFS({{vat_paid[:n]}},{{tim_prd_end[:n]}},"<="&{{tim_prd_end[n]}}-{{vat_refund_lag_days}},{{tim_prd_end[:n]}},">"&{{tim_prd_end[n-1]}}-{{vat_refund_lag_days}})
+
+    /// @label VAT - receivable balance
+    /// @unit EUR 000s
+    calc[t1] vat_rcv_bal = {{vat_rcv_bal[n-1]}}+{{vat_paid[n]}}-{{vat_refund[n]}}
+
+  ## h_cons_vat_fac: Facility Balance
+
+    /// @label VAT facility - opening balance
+    /// @unit EUR 000s
+    calc[t1] vat_fac_bal_open = {{vat_fac_bal[n-1]}}
+
+    /// @label VAT facility - repayment
+    /// @unit EUR 000s
+    calc[t1] vat_fac_repay = MIN({{vat_refund[n]}},{{vat_fac_bal_open[n]}}+{{vat_paid[n]}})
+
+    /// @label VAT facility - closing balance
+    /// @unit EUR 000s
+    calc[t1] vat_fac_bal = {{vat_fac_bal_open[n]}}+{{vat_paid[n]}}-{{vat_fac_repay[n]}}
+
+  ## h_cons_vat_int: Facility Interest
+
+    /// @label VAT facility - interest
+    /// @unit EUR 000s
+    calc[t1] vat_fac_int = {{vat_fac_bal_open[n]}}*{{vat_fac_rate}}*{{tim_dys_prd[n]}}/{{cst_dys_yr}}
+
+    /// @label VAT facility - capitalised interest
+    /// @unit EUR 000s
+    calc[t1] vat_fac_int_cap = {{vat_fac_int[n]}}*({{tim_fc_flag[n]}}+{{tim_con_flag[n]}})
+
+    /// @label VAT facility - interest in operations
+    /// @unit EUR 000s
+    calc[t1] vat_fac_int_ops = {{vat_fac_int[n]}}*{{tim_ops_flag[n]}}
+
+  ## h_cons_vat_chk: VAT Checks
+
+    /// @label VAT - receivable left after first operating year
+    /// @unit check
+    calc chk_vat_rcv_clear = IF(ABS(SUMIFS({{vat_rcv_bal[:]}},{{tim_cntr_yr_num[:]}},1,{{tim_fy_end_flag[:]}},1))>{{cst_chk_tol}},1,0)
+
+    /// @label VAT facility - not repaid after first operating year
+    /// @unit check
+    calc chk_vat_fac_repaid = IF(ABS(SUMIFS({{vat_fac_bal[:]}},{{tim_cntr_yr_num[:]}},1,{{tim_fy_end_flag[:]}},1))>{{cst_chk_tol}},1,0)
+
+
+# h_cons_fnd: PROJECT FUNDING
+
+  ## h_cons_fnd_src: Funding Sources
+
+    /// @label Funding requirement - total
+    /// @unit EUR 000s
+    calc fnd_req_total = SUM({{fnd_req_paste[:]}})
+
+    /// @label Senior facility - amount
+    /// @unit EUR 000s
+    calc fnd_sd_amount = MAX(0,MIN({{sd_capacity_paste}},{{fnd_max_gearing}}*{{fnd_req_total}}))
+
+    /// @label Sponsor equity - amount (shareholder loan and share capital)
+    /// @unit EUR 000s
+    calc fnd_eq_amount = {{fnd_req_total}}-{{fnd_sd_amount}}-{{jd_amount}}
+
+  ## h_cons_fnd_draw: Drawdowns
+
+    /// @label Funding requirement - cumulative
+    /// @unit EUR 000s
+    calc[t1] fnd_req_cum = {{fnd_req_cum[n-1]}}+{{fnd_req_paste[n]}}
+
+    /// @label Sponsor equity - drawdown
+    /// @unit EUR 000s
+    calc[t1] fnd_eq_draw = IF({{fnd_draw_order}}={{cst_draw_order_eq_first}},MIN({{fnd_req_cum[n]}},{{fnd_eq_amount}})-MIN({{fnd_req_cum[n]}}-{{fnd_req_paste[n]}},{{fnd_eq_amount}}),IF({{fnd_req_total}}=0,0,{{fnd_req_paste[n]}}*{{fnd_eq_amount}}/{{fnd_req_total}}))
+
+    /// @label Junior facility - drawdown
+    /// @unit EUR 000s
+    calc[t1] fnd_jd_draw = IF({{fnd_draw_order}}={{cst_draw_order_eq_first}},MIN({{fnd_req_cum[n]}},{{fnd_eq_amount}}+{{jd_amount}})-MIN({{fnd_req_cum[n]}}-{{fnd_req_paste[n]}},{{fnd_eq_amount}}+{{jd_amount}})-{{fnd_eq_draw[n]}},IF({{fnd_req_total}}=0,0,{{fnd_req_paste[n]}}*{{jd_amount}}/{{fnd_req_total}}))
+
+    /// @label Senior facility - drawdown
+    /// @unit EUR 000s
+    calc[t1] fnd_sd_draw = {{fnd_req_paste[n]}}-{{fnd_eq_draw[n]}}-{{fnd_jd_draw[n]}}
+
+  ## h_cons_fnd_cost: Financing Costs and Requirement
+
+    /// @label Senior facility - undrawn commitment
+    /// @unit EUR 000s
+    calc[t1] fnd_undrawn = MAX(0,{{fnd_sd_amount}}-{{sd_bal_open[n]}})*({{tim_fc_flag[n]}}+{{tim_con_flag[n]}})
+
+    /// @label Senior facility - interest during construction
+    /// @unit EUR 000s
+    calc[t1] fnd_idc = {{sd_bal_open[n]}}*{{sd_rate}}*{{tim_dys_prd[n]}}/{{cst_dys_yr}}*{{tim_con_flag[n]}}
+
+    /// @label Senior facility - upfront fee
+    /// @unit EUR 000s
+    calc[t1] fnd_fee_upfront = {{fnd_sd_amount}}*{{sd_upfront_fee_pct}}*{{tim_fc_flag[n]}}
+
+    /// @label Senior facility - commitment fee
+    /// @unit EUR 000s
+    calc[t1] fnd_fee_commit = {{fnd_undrawn[n]}}*{{sd_commit_fee_pct}}*{{tim_dys_prd[n]}}/{{cst_dys_yr}}*{{tim_con_flag[n]}}
+
+    /// @label Financing fees - total
+    /// @unit EUR 000s
+    calc[t1] fnd_fees = {{fnd_fee_upfront[n]}}+{{fnd_fee_commit[n]}}
+
+    /// @label Financing costs - capitalised in the period
+    /// @unit EUR 000s
+    calc[t1] fnd_cap_fin_cost = {{fnd_idc[n]}}+{{jd_idc[n]}}+{{fnd_fees[n]}}+{{vat_fac_int_cap[n]}}
+
+    /// @label Funding requirement - period
+    /// @unit EUR 000s
+    calc[t1] fnd_req = {{cpx_total[n]}}+{{fnd_cap_fin_cost[n]}}+{{res_dsra_initial_fund[n]}}
+
+
+# h_cons_chk: CONSTRUCTION CHECKS
+
+  /// @label Funding - sources differ from uses
+  /// @unit check
+  calc chk_fnd_sources_uses = IF(ABS(SUM({{fnd_eq_draw[:]}})+SUM({{fnd_jd_draw[:]}})+SUM({{fnd_sd_draw[:]}})-SUM({{fnd_req[:]}}))>{{cst_chk_tol}},1,0)
+
+  /// @label Funding - tranche draws differ from amounts
+  /// @unit check
+  calc chk_fnd_tranche_draws = IF(ABS(SUM({{fnd_sd_draw[:]}})-{{fnd_sd_amount}})+ABS(SUM({{fnd_eq_draw[:]}})-{{fnd_eq_amount}})+ABS(SUM({{fnd_jd_draw[:]}})-{{jd_amount}})>{{cst_chk_tol}},1,0)
+
+  /// @label Capex package 1 - profile does not sum to 100%
+  /// @unit check
+  calc chk_cpx_prof1 = IF(ABS(SUMIFS({{cpx_pkg1_prof[:]}},{{tim_con_flag[:]}},1)-1)>{{cst_chk_tol}},1,0)
+
+  /// @label Capex package 2 - profile does not sum to 100%
+  /// @unit check
+  calc chk_cpx_prof2 = IF(ABS(SUMIFS({{cpx_pkg2_prof[:]}},{{tim_con_flag[:]}},1)-1)>{{cst_chk_tol}},1,0)
+
+  /// @label Capex package 3 - profile does not sum to 100%
+  /// @unit check
+  calc chk_cpx_prof3 = IF(ABS(SUMIFS({{cpx_pkg3_prof[:]}},{{tim_con_flag[:]}},1)-1)>{{cst_chk_tol}},1,0)
+
+  /// @label Capex package 4 - profile does not sum to 100%
+  /// @unit check
+  calc chk_cpx_prof4 = IF(ABS(SUMIFS({{cpx_pkg4_prof[:]}},{{tim_con_flag[:]}},1)-1)>{{cst_chk_tol}},1,0)

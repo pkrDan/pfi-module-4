@@ -1,0 +1,165 @@
+// Waterfall — decompiler preview: structure, names and derived calc bodies are live output; non-compliant and underived rows render as `raw` lines (coordinates + cell payloads, verbatim)
+  /// @label Error chks
+  /// @slot error-checks
+  calc wf_error_chks = {{total_checks}}  // link
+
+  /// @label Model period ending
+  /// @slot model-period-ending
+  calc[t1] wf_mdl_prd_end = {{tim_prd_end[n]}}  // link
+
+  /// @label Alerts
+  /// @slot alerts
+  calc wf_alerts = {{total_alerts}}  // link
+
+  /// @label Timeline label
+  /// @slot timeline-label
+  calc[t1] wf_tmln_label = {{tim_tmln_label[n]}}  // link
+
+  /// @label Financial year
+  /// @slot contract-year
+  calc[t1] wf_fin_yr = {{tim_fin_yr[n]}}  // link
+
+  /// @label Model column counter
+  /// @slot column-counter
+  calc[t1] wf_column_counter = {{tim_prd_cntr[n]}}  // link
+
+
+# h_wf_senior: CASH FLOW AVAILABLE FOR DEBT SERVICE
+
+  /// @label Cash flow available for debt service
+  /// @unit EUR 000s
+  calc[t1] wf_cfads = {{ops_ebitda[n]}}+{{wc_cash_mvt[n]}}-{{tax_payable[n]}}-{{res_maint_unfunded[n]}}-{{vat_fac_int_ops[n]}}
+
+  /// @label Cash flow - after senior debt service and DSRF fee
+  /// @unit EUR 000s
+  calc[t1] wf_cash_post_sd = {{wf_cfads[n]}}-{{sd_ds[n]}}-{{res_dsrf_fee[n]}}
+
+
+# h_wf_rsv: RESERVE ACCOUNT MOVEMENTS
+
+  ## h_wf_dsra: DSRA Movements
+
+    /// @label Cash available - DSRA deposit
+    /// @unit EUR 000s
+    calc[t1] wf_cash_for_dsra = MAX(0,{{wf_cash_post_sd[n]}}+{{res_dsra_draw[n]}})
+
+    /// @label Cash flow - after DSRA movements
+    /// @unit EUR 000s
+    calc[t1] wf_cash_post_dsra = {{wf_cash_post_sd[n]}}+{{res_dsra_draw[n]}}+{{res_dsra_release[n]}}-{{res_dsra_deposit[n]}}
+
+  ## h_wf_mra: MRA Movements
+
+    /// @label Cash available - MRA deposit
+    /// @unit EUR 000s
+    calc[t1] wf_cash_for_mra = MAX(0,{{wf_cash_post_dsra[n]}})
+
+    /// @label Cash flow - after reserve movements
+    /// @unit EUR 000s
+    calc[t1] wf_cash_post_rsv = {{wf_cash_post_dsra[n]}}+{{res_mra_release[n]}}-{{res_mra_deposit[n]}}
+
+
+# h_wf_junior: JUNIOR DEBT SERVICE
+
+  /// @label Cash available - junior debt service
+  /// @unit EUR 000s
+  calc[t1] wf_cash_for_jd = MAX(0,{{wf_cash_post_rsv[n]}})
+
+  /// @label Cash flow - after junior debt service
+  /// @unit EUR 000s
+  calc[t1] wf_cash_post_jd = {{wf_cash_post_rsv[n]}}-{{jd_ds[n]}}
+
+
+# h_wf_lockup: DISTRIBUTION LOCK-UP
+
+  ## h_wf_dscr: Historical DSCR
+
+    /// @label CFADS - trailing 12 months
+    /// @unit EUR 000s
+    calc[t1] wf_cfads_12m = SUMIFS({{wf_cfads[:n]}},{{tim_prd_end[:n]}},">"&EDATE({{tim_prd_end[n]}},-{{cst_mos_yr}}))+{{wf_cfads[n]}}
+
+    /// @label Senior debt service - trailing 12 months
+    /// @unit EUR 000s
+    calc[t1] wf_ds_12m = SUMIFS({{sd_ds[:n]}},{{tim_prd_end[:n]}},">"&EDATE({{tim_prd_end[n]}},-{{cst_mos_yr}}))+{{sd_ds[n]}}
+
+    /// @label Senior facility - historical 12-month DSCR
+    /// @unit ratio
+    calc[t1] wf_hist_dscr = IF({{wf_ds_12m[n]}}>{{cst_chk_tol}},{{wf_cfads_12m[n]}}/{{wf_ds_12m[n]}},0)
+
+  ## h_wf_lock: Lock-up Test
+
+    /// @label Lock-up - full 12-month window flag
+    /// @unit flag
+    calc[t1] wf_lockup_win_flag = {{tim_ops_flag[n]}}*IF(EDATE({{tim_prd_end[n]}},-{{cst_mos_yr}})>={{tim_con_end_dt}},1,0)
+
+    /// @label Lock-up - distributions blocked flag
+    /// @unit flag
+    calc[t1] wf_lockup_flag = {{wf_lockup_win_flag[n]}}*IF(AND({{wf_ds_12m[n]}}>{{cst_chk_tol}},{{wf_hist_dscr[n]}}<{{wf_lockup_dscr}}),1,0)
+
+
+# h_wf_sweep: CASH SWEEP
+
+  /// @label Cash sweep - share applied
+  /// @unit %
+  calc[t1] wf_sweep_share = {{wf_sweep_pct}}+IF({{wf_sweep_on_lockup}}={{cst_sweep_lockup_on}},{{wf_lockup_flag[n]}},0)*(1-{{wf_sweep_pct}})
+
+  /// @label Senior facility - cash sweep prepayment
+  /// @unit EUR 000s
+  calc[t1] wf_sweep = MIN(MAX(0,{{sd_bal_open[n]}}-{{sd_prin[n]}}),{{wf_sweep_share[n]}}*MAX(0,{{wf_cash_post_jd[n]}}))*{{sd_rpmt_flag[n]}}
+
+
+# h_wf_dist: DISTRIBUTIONS AND CASH BALANCE
+
+  ## h_wf_dist_cash: Distributions and Cash Balance
+
+    /// @label Cash balance - opening
+    /// @unit EUR 000s
+    calc[t1] wf_cash_bal_open = {{wf_cash_bal[n-1]}}
+
+    /// @label Distributions - cash available
+    /// @unit EUR 000s
+    calc[t1] wf_dist_avail = MAX(0,{{wf_cash_bal_open[n]}}+{{wf_cash_post_jd[n]}}-{{wf_sweep[n]}}-{{wf_min_cash}}*{{tim_ops_flag[n]}})
+
+    /// @label Distributions - cash released to shareholders
+    /// @unit EUR 000s
+    calc[t1] wf_dist = {{wf_dist_avail[n]}}*(1-{{wf_lockup_flag[n]}})
+
+    /// @label Cash balance - closing
+    /// @unit EUR 000s
+    calc[t1] wf_cash_bal = {{wf_cash_bal_open[n]}}+{{wf_cash_post_jd[n]}}-{{wf_sweep[n]}}-{{eq_dist_paid[n]}}
+
+  ## h_wf_trap: Trapped Cash
+
+    /// @label Trapped cash - opening balance
+    /// @unit EUR 000s
+    calc[t1] wf_trapped_open = {{wf_trapped[n-1]}}
+
+    /// @label Trapped cash - retained in the period (net)
+    /// @unit EUR 000s
+    calc[t1] wf_trapped_add = {{wf_lockup_flag[n]}}*({{wf_dist_avail[n]}}-{{wf_trapped_open[n]}})
+
+    /// @label Trapped cash - released on recovery
+    /// @unit EUR 000s
+    calc[t1] wf_trapped_release = (1-{{wf_lockup_flag[n]}})*{{wf_trapped_open[n]}}
+
+    /// @label Trapped cash - closing balance
+    /// @unit EUR 000s
+    calc[t1] wf_trapped = {{wf_trapped_open[n]}}+{{wf_trapped_add[n]}}-{{wf_trapped_release[n]}}
+
+
+# h_wf_chk: WATERFALL CHECKS
+
+  /// @label Cash balance - negative
+  /// @unit alert
+  calc chk_wf_cash_nonneg = IF(MIN({{wf_cash_bal[:]}})<-{{cst_chk_tol}},1,0)
+
+  /// @label Cash balance - flows do not reconcile
+  /// @unit check
+  calc chk_wf_cash_closes = IF(ABS(SUM({{wf_cfads[:]}})-SUM({{sd_ds[:]}})-SUM({{res_dsrf_fee[:]}})+SUM({{res_dsra_draw[:]}})+SUM({{res_dsra_release[:]}})-SUM({{res_dsra_deposit[:]}})+SUM({{res_mra_release[:]}})-SUM({{res_mra_deposit[:]}})-SUM({{jd_ds[:]}})-SUM({{wf_sweep[:]}})-SUM({{eq_dist_paid[:]}})-SUMIFS({{wf_cash_bal[:]}},{{tim_lst_prd_flag[:]}},1))>{{cst_chk_tol}},1,0)
+
+  /// @label Trapped cash - exceeds the cash balance
+  /// @unit check
+  calc chk_wf_trapped_le_cash = IF(SUMPRODUCT(({{wf_trapped[:]}}-{{wf_cash_bal[:]}}*({{wf_cash_bal[:]}}>0)>{{cst_chk_tol}})*1)>0,1,0)
+
+  /// @label Distributions - lock-up in force
+  /// @unit alert
+  calc chk_wf_alert_lockup = IF(MAX({{wf_lockup_flag[:]}})>0,1,0)

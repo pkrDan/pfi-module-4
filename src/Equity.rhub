@@ -1,0 +1,185 @@
+// Equity — decompiler preview: structure, names and derived calc bodies are live output; non-compliant and underived rows render as `raw` lines (coordinates + cell payloads, verbatim)
+  /// @label Error chks
+  /// @slot error-checks
+  calc eq_error_chks = {{total_checks}}  // link
+
+  /// @label Model period ending
+  /// @slot model-period-ending
+  calc[t1] eq_mdl_prd_end = {{tim_prd_end[n]}}  // link
+
+  /// @label Alerts
+  /// @slot alerts
+  calc eq_alerts = {{total_alerts}}  // link
+
+  /// @label Timeline label
+  /// @slot timeline-label
+  calc[t1] eq_tmln_label = {{tim_tmln_label[n]}}  // link
+
+  /// @label Financial year
+  /// @slot contract-year
+  calc[t1] eq_fin_yr = {{tim_fin_yr[n]}}  // link
+
+  /// @label Model column counter
+  /// @slot column-counter
+  calc[t1] eq_column_counter = {{tim_prd_cntr[n]}}  // link
+
+
+# h_eq_split: EQUITY DRAWDOWN SPLIT
+
+  /// @label Shareholder loan - amount drawn
+  /// @unit EUR 000s
+  calc[t1] eq_shl_draw = {{fnd_eq_draw[n]}}*{{eq_shl_pct}}
+
+  /// @label Share capital - subscription
+  /// @unit EUR 000s
+  calc[t1] eq_sc_draw = {{fnd_eq_draw[n]}}*(1-{{eq_shl_pct}})
+
+
+# h_eq_shl: SUBORDINATED SHAREHOLDER LOAN
+
+  ## h_eq_shl_int: Interest Accrual
+
+    /// @label Shareholder loan - opening balance
+    /// @unit EUR 000s
+    calc[t1] eq_shl_bal_open = {{eq_shl_bal[n-1]}}
+
+    /// @label Shareholder loan - opening unpaid interest
+    /// @unit EUR 000s
+    calc[t1] eq_shl_arr_open = {{eq_shl_arr[n-1]}}
+
+    /// @label Shareholder loan - interest accrued
+    /// @unit EUR 000s
+    calc[t1] eq_shl_int = ({{eq_shl_bal_open[n]}}+{{eq_shl_arr_open[n]}})*{{eq_shl_rate}}*{{tim_dys_prd[n]}}/{{cst_dys_yr}}
+
+    /// @label Shareholder loan - interest capitalised
+    /// @unit EUR 000s
+    calc[t1] eq_shl_int_cap = {{eq_shl_int[n]}}*IF({{tim_prd_end[n]}}<={{tim_con_end_dt}},1,0)*IF({{eq_shl_rollup}}={{cst_shl_rollup_on}},1,0)
+
+    /// @label Shareholder loan - interest payable in cash
+    /// @unit EUR 000s
+    calc[t1] eq_shl_int_due = {{eq_shl_int[n]}}-{{eq_shl_int_cap[n]}}
+
+  ## h_eq_shl_pay: Payments and Balances
+
+    /// @label Shareholder loan - interest settled
+    /// @unit EUR 000s
+    calc[t1] eq_shl_int_paid = MIN({{eq_shl_arr_open[n]}}+{{eq_shl_int_due[n]}},{{wf_dist[n]}})
+
+    /// @label Shareholder loan - closing unpaid interest
+    /// @unit EUR 000s
+    calc[t1] eq_shl_arr = {{eq_shl_arr_open[n]}}+{{eq_shl_int_due[n]}}-{{eq_shl_int_paid[n]}}
+
+    /// @label Shareholder loan - principal repaid
+    /// @unit EUR 000s
+    calc[t1] eq_shl_prin_paid = MIN({{eq_shl_bal_open[n]}},{{wf_dist[n]}}-{{eq_shl_int_paid[n]}})
+
+    /// @label Shareholder loan - closing balance
+    /// @unit EUR 000s
+    calc[t1] eq_shl_bal = {{eq_shl_bal_open[n]}}+{{eq_shl_draw[n]}}+{{eq_shl_int_cap[n]}}-{{eq_shl_prin_paid[n]}}
+
+
+# h_eq_ret_cap: CAPITAL RETURN AND DIVIDENDS
+
+  /// @label Shareholders - cash after shareholder loan
+  /// @unit EUR 000s
+  calc[t1] eq_cash_post_shl = {{wf_dist[n]}}-{{eq_shl_int_paid[n]}}-{{eq_shl_prin_paid[n]}}
+
+  /// @label Share capital - opening balance
+  /// @unit EUR 000s
+  calc[t1] eq_sc_bal_open = {{eq_sc_bal[n-1]}}
+
+  /// @label Share capital - redeemed from operations end
+  /// @unit EUR 000s
+  calc[t1] eq_sc_redeem = MIN({{eq_cash_post_shl[n]}},{{eq_sc_bal_open[n]}})*IF({{tim_prd_end[n]}}>={{tim_ops_end_dt}},1,0)
+
+  /// @label Share capital - closing balance
+  /// @unit EUR 000s
+  calc[t1] eq_sc_bal = {{eq_sc_bal_open[n]}}+{{eq_sc_draw[n]}}-{{eq_sc_redeem[n]}}
+
+  /// @label Dividends - paid
+  /// @unit EUR 000s
+  calc[t1] eq_div = MIN({{eq_cash_post_shl[n]}}-{{eq_sc_redeem[n]}},MAX(0,{{fs_re_avail[n]}}))
+
+
+# h_eq_flow: EQUITY CASH FLOW
+
+  /// @label Shareholders - total cash paid
+  /// @unit EUR 000s
+  calc[t1] eq_dist_paid = {{eq_shl_int_paid[n]}}+{{eq_shl_prin_paid[n]}}+{{eq_sc_redeem[n]}}+{{eq_div[n]}}
+
+  /// @label Equity - cash flow (IRR basis)
+  /// @unit EUR 000s
+  calc[t1] eq_flow = {{eq_dist_paid[n]}}-{{eq_shl_draw[n]}}-{{eq_sc_draw[n]}}+{{cst_xirr_seed}}*{{tim_frst_prd_flag[n]}}
+
+
+# h_eq_returns: RETURNS
+
+  ## h_eq_eq_ret: Equity Returns
+
+    /// @label Equity - IRR (nominal)
+    /// @unit %
+    calc rr_eq_irr = IF(AND(MIN({{eq_flow[:]}})<-{{cst_chk_tol}},MAX({{eq_flow[:]}})>{{cst_chk_tol}}),XIRR({{eq_flow[:]}},{{tim_prd_end[:]}}),0)
+
+    /// @label Equity - NPV at the discount rate
+    /// @unit EUR 000s
+    calc rr_eq_npv = XNPV({{eq_disc_rate}},{{eq_flow[:]}},{{tim_prd_end[:]}})
+
+  ## h_eq_proj_ret: Project Return
+
+    /// @label Project - cash flow after tax, before debt service
+    /// @unit EUR 000s
+    calc[t1] rr_proj_flow = {{wf_cfads[n]}}-{{cpx_total[n]}}+{{cst_xirr_seed}}*{{tim_frst_prd_flag[n]}}
+
+    /// @label Project - IRR (post-tax)
+    /// @unit %
+    calc rr_proj_irr = IF(AND(MIN({{rr_proj_flow[:]}})<-{{cst_chk_tol}},MAX({{rr_proj_flow[:]}})>{{cst_chk_tol}}),XIRR({{rr_proj_flow[:]}},{{tim_prd_end[:]}}),0)
+
+
+# h_eq_cover: SENIOR COVER RATIOS
+
+  ## h_eq_dscr: Debt Service Cover
+
+    /// @label Senior cover - test period flag
+    /// @unit flag
+    calc[t1] rr_cover_flag = {{sd_rpmt_flag[n]}}*IF({{sd_ds[n]}}>{{cst_chk_tol}},1,0)
+
+    /// @label Senior cover - minimum DSCR
+    /// @unit ratio
+    calc rr_dscr_min = IF(SUM({{rr_cover_flag[:]}})>0,MINIFS({{sd_dscr[:]}},{{rr_cover_flag[:]}},1),0)
+
+    /// @label Senior cover - average DSCR
+    /// @unit ratio
+    calc rr_dscr_avg = IF(SUM({{rr_cover_flag[:]}})>0,AVERAGEIFS({{sd_dscr[:]}},{{rr_cover_flag[:]}},1),0)
+
+  ## h_eq_llcr: Loan Life Cover
+
+    /// @label Senior cover - discount factor at period end
+    /// @unit factor
+    calc[t1] rr_df = IF({{tim_frst_prd_flag[n]}}=1,1,{{rr_df[n-1]}})/(1+{{sd_rate}}*{{tim_dys_prd[n]}}/{{cst_dys_yr}})
+
+    /// @label Senior cover - CFADS discounted to the first period
+    /// @unit EUR 000s
+    calc[t1] rr_cfads_pv = {{wf_cfads[n]}}*{{sd_rpmt_flag[n]}}*{{rr_df[n]}}
+
+    /// @label Senior cover - LLCR
+    /// @unit ratio
+    calc[t1] rr_llcr = IF(AND({{rr_cover_flag[n]}}=1,{{sd_bal_open[n]}}>{{cst_chk_tol}}),SUMIFS({{rr_cfads_pv[:]}},{{tim_prd_end[:]}},">="&{{tim_prd_end[n]}})/({{rr_df[n]}}*(1+{{sd_rate}}*{{tim_dys_prd[n]}}/{{cst_dys_yr}}))/{{sd_bal_open[n]}},0)
+
+    /// @label Senior cover - minimum LLCR
+    /// @unit ratio
+    calc rr_llcr_min = IF(SUM({{rr_cover_flag[:]}})>0,MINIFS({{rr_llcr[:]}},{{rr_cover_flag[:]}},1),0)
+
+
+# h_eq_chk: EQUITY CHECKS
+
+  /// @label Shareholder funding - balances do not reconcile
+  /// @unit check
+  calc chk_eq_bal_closes = IF(ABS(SUM({{eq_shl_draw[:]}})+SUM({{eq_shl_int_cap[:]}})-SUM({{eq_shl_prin_paid[:]}})-SUMIFS({{eq_shl_bal[:]}},{{tim_lst_prd_flag[:]}},1))+ABS(SUM({{eq_shl_int_due[:]}})-SUM({{eq_shl_int_paid[:]}})-SUMIFS({{eq_shl_arr[:]}},{{tim_lst_prd_flag[:]}},1))+ABS(SUM({{eq_sc_draw[:]}})-SUM({{eq_sc_redeem[:]}})-SUMIFS({{eq_sc_bal[:]}},{{tim_lst_prd_flag[:]}},1))>{{cst_chk_tol}},1,0)
+
+  /// @label Shareholder funding - not returned by the model end
+  /// @unit alert
+  calc chk_eq_alert_unreturned = IF(SUMIFS({{eq_shl_bal[:]}},{{tim_lst_prd_flag[:]}},1)+SUMIFS({{eq_shl_arr[:]}},{{tim_lst_prd_flag[:]}},1)+SUMIFS({{eq_sc_bal[:]}},{{tim_lst_prd_flag[:]}},1)>{{cst_chk_tol}},1,0)
+
+  /// @label Cash balance - left undistributed at the model end
+  /// @unit alert
+  calc chk_eq_alert_cash_left = IF(SUMIFS({{wf_cash_bal[:]}},{{tim_lst_prd_flag[:]}},1)>{{cst_chk_tol}},1,0)

@@ -1,0 +1,228 @@
+// FS — decompiler preview: structure, names and derived calc bodies are live output; non-compliant and underived rows render as `raw` lines (coordinates + cell payloads, verbatim)
+  /// @label Error chks
+  /// @slot error-checks
+  calc fs_error_chks = {{total_checks}}  // link
+
+  /// @label Model period ending
+  /// @slot model-period-ending
+  calc[t1] fs_mdl_prd_end = {{tim_prd_end[n]}}  // link
+
+  /// @label Alerts
+  /// @slot alerts
+  calc fs_alerts = {{total_alerts}}  // link
+
+  /// @label Timeline label
+  /// @slot timeline-label
+  calc[t1] fs_tmln_label = {{tim_tmln_label[n]}}  // link
+
+  /// @label Financial year
+  /// @slot contract-year
+  calc[t1] fs_fin_yr = {{tim_fin_yr[n]}}  // link
+
+  /// @label Model column counter
+  /// @slot column-counter
+  calc[t1] fs_column_counter = {{tim_prd_cntr[n]}}  // link
+
+
+# h_fs_pl: PROFIT AND LOSS
+
+  /// @label Profit - EBITDA after maintenance
+  /// @unit EUR 000s
+  calc[t1] fs_pl_ebitda = {{rev_total[n]}}-{{opx_total[n]}}-{{res_maint_cost_nom[n]}}
+
+  /// @label Profit - operating (EBIT)
+  /// @unit EUR 000s
+  calc[t1] fs_pl_ebit = {{fs_pl_ebitda[n]}}-{{fa_acc_dep[n]}}-{{fa_nbv_writeoff[n]}}-{{fa_fin_amort[n]}}
+
+  /// @label Profit - before tax (PBT)
+  /// @unit EUR 000s
+  calc[t1] fs_pl_pbt = {{fs_pl_ebit[n]}}-{{sd_int[n]}}-{{jd_int[n]}}-{{vat_fac_int_ops[n]}}-{{res_dsrf_fee[n]}}-{{eq_shl_int[n]}}
+
+  /// @label Profit - after tax (PAT)
+  /// @unit EUR 000s
+  calc[t1] fs_pl_pat = {{fs_pl_pbt[n]}}-{{tax_payable[n]}}-{{tax_dt_chg[n]}}
+
+
+# h_fs_re: RETAINED EARNINGS
+
+  /// @label Retained earnings - available for distribution
+  /// @unit EUR 000s
+  calc[t1] fs_re_avail = {{fs_re[n-1]}}+{{fs_pl_pat[n]}}
+
+  /// @label Retained earnings - opening balance
+  /// @unit EUR 000s
+  calc[t1] fs_re_open = {{fs_re[n-1]}}
+
+  /// @label Retained earnings - closing balance
+  /// @unit EUR 000s
+  calc[t1] fs_re = {{fs_re_open[n]}}+{{fs_pl_pat[n]}}-{{eq_div[n]}}
+
+
+# h_fs_cf: CASH FLOW STATEMENT
+
+  ## h_fs_cf_act: Cash Flow by Activity
+
+    /// @label Cash flow - operating activities
+    /// @unit EUR 000s
+    calc[t1] fs_cf_ops = {{fs_pl_ebitda[n]}}+{{wc_cash_mvt[n]}}-{{tax_payable[n]}}
+
+    /// @label Cash flow - investing activities
+    /// @unit EUR 000s
+    calc[t1] fs_cf_inv = {{vat_refund[n]}}-{{cpx_total[n]}}-{{vat_paid[n]}}
+
+    /// @label Cash flow - reserve accounts
+    /// @unit EUR 000s
+    calc[t1] fs_cf_rsv = {{res_dsra_draw[n]}}+{{res_dsra_release[n]}}-{{res_dsra_deposit[n]}}-{{res_dsra_initial_fund[n]}}+{{res_mra_draw[n]}}+{{res_mra_release[n]}}-{{res_mra_deposit[n]}}
+
+    /// @label Cash flow - debt financing
+    /// @unit EUR 000s
+    calc[t1] fs_cf_debt = {{fnd_sd_draw[n]}}+{{fnd_jd_draw[n]}}+{{vat_paid[n]}}-{{vat_fac_repay[n]}}-{{fnd_cap_fin_cost[n]}}-{{sd_ds[n]}}-{{wf_sweep[n]}}-{{res_dsrf_fee[n]}}-{{vat_fac_int_ops[n]}}-{{jd_ds[n]}}
+
+    /// @label Cash flow - shareholder financing
+    /// @unit EUR 000s
+    calc[t1] fs_cf_eq = {{fnd_eq_draw[n]}}-{{eq_shl_int_paid[n]}}-{{eq_shl_prin_paid[n]}}-{{eq_sc_redeem[n]}}-{{eq_div[n]}}
+
+    /// @label Cash flow - net movement
+    /// @unit EUR 000s
+    calc[t1] fs_cf_net = {{fs_cf_ops[n]}}+{{fs_cf_inv[n]}}+{{fs_cf_rsv[n]}}+{{fs_cf_debt[n]}}+{{fs_cf_eq[n]}}
+
+  ## h_fs_cf_cash: Cash at Bank
+
+    /// @label Cash at bank - opening balance
+    /// @unit EUR 000s
+    calc[t1] fs_cash_open = {{fs_cash[n-1]}}
+
+    /// @label Cash at bank - closing balance
+    /// @unit EUR 000s
+    calc[t1] fs_cash = {{fs_cash_open[n]}}+{{fs_cf_net[n]}}
+
+
+# h_fs_bs: BALANCE SHEET
+
+  ## h_fs_bs_ast: Assets
+
+    /// @label Assets - non-current
+    /// @unit EUR 000s
+    calc[t1] fs_bs_nca = {{fa_nbv[n]}}+{{fa_fin_nbv[n]}}
+
+    /// @label Assets - current
+    /// @unit EUR 000s
+    calc[t1] fs_bs_ca = {{vat_rcv_bal[n]}}+{{wc_rcv_bal[n]}}+{{res_dsra_bal[n]}}+{{res_mra_bal[n]}}+{{fs_cash[n]}}
+
+    /// @label Assets - total
+    /// @unit EUR 000s
+    calc[t1] fs_bs_assets = {{fs_bs_nca[n]}}+{{fs_bs_ca[n]}}
+
+  ## h_fs_bs_liab: Liabilities and Equity
+
+    /// @label Liabilities - borrowings
+    /// @unit EUR 000s
+    calc[t1] fs_bs_debt = {{sd_bal_close[n]}}+{{jd_bal_close[n]}}+{{jd_int_arr_close[n]}}+{{vat_fac_bal[n]}}
+
+    /// @label Liabilities - shareholder loan
+    /// @unit EUR 000s
+    calc[t1] fs_bs_shl = {{eq_shl_bal[n]}}+{{eq_shl_arr[n]}}
+
+    /// @label Liabilities - payables and deferred tax
+    /// @unit EUR 000s
+    calc[t1] fs_bs_oth = {{wc_pay_bal[n]}}+{{tax_dt_bal[n]}}
+
+    /// @label Liabilities - total
+    /// @unit EUR 000s
+    calc[t1] fs_bs_liab = {{fs_bs_debt[n]}}+{{fs_bs_shl[n]}}+{{fs_bs_oth[n]}}
+
+    /// @label Net assets - total
+    /// @unit EUR 000s
+    calc[t1] fs_bs_net = {{fs_bs_assets[n]}}-{{fs_bs_liab[n]}}
+
+    /// @label Equity - share capital and retained earnings
+    /// @unit EUR 000s
+    calc[t1] fs_bs_equity = {{eq_sc_bal[n]}}+{{fs_re[n]}}
+
+
+# h_fs_ann: ANNUAL SUMMARY
+
+  ## h_fs_ann_pl: Profit and Loss by Financial Year
+
+    /// @label Annual - EBITDA after maintenance
+    /// @unit EUR 000s
+    calc[t1] fs_ann_ebitda = IF({{tim_fy_end_flag[n]}}=1,SUMIFS({{fs_pl_ebitda[:n]}},{{tim_fin_yr[:n]}},{{tim_fin_yr[n]}})+{{fs_pl_ebitda[n]}},0)
+
+    /// @label Annual - operating profit (EBIT)
+    /// @unit EUR 000s
+    calc[t1] fs_ann_ebit = IF({{tim_fy_end_flag[n]}}=1,SUMIFS({{fs_pl_ebit[:n]}},{{tim_fin_yr[:n]}},{{tim_fin_yr[n]}})+{{fs_pl_ebit[n]}},0)
+
+    /// @label Annual - profit before tax
+    /// @unit EUR 000s
+    calc[t1] fs_ann_pbt = IF({{tim_fy_end_flag[n]}}=1,SUMIFS({{fs_pl_pbt[:n]}},{{tim_fin_yr[:n]}},{{tim_fin_yr[n]}})+{{fs_pl_pbt[n]}},0)
+
+    /// @label Annual - profit after tax
+    /// @unit EUR 000s
+    calc[t1] fs_ann_pat = IF({{tim_fy_end_flag[n]}}=1,SUMIFS({{fs_pl_pat[:n]}},{{tim_fin_yr[:n]}},{{tim_fin_yr[n]}})+{{fs_pl_pat[n]}},0)
+
+  ## h_fs_ann_cf: Cash Flow by Financial Year
+
+    /// @label Annual - operating cash flow
+    /// @unit EUR 000s
+    calc[t1] fs_ann_cf_ops = IF({{tim_fy_end_flag[n]}}=1,SUMIFS({{fs_cf_ops[:n]}},{{tim_fin_yr[:n]}},{{tim_fin_yr[n]}})+{{fs_cf_ops[n]}},0)
+
+    /// @label Annual - investing cash flow
+    /// @unit EUR 000s
+    calc[t1] fs_ann_cf_inv = IF({{tim_fy_end_flag[n]}}=1,SUMIFS({{fs_cf_inv[:n]}},{{tim_fin_yr[:n]}},{{tim_fin_yr[n]}})+{{fs_cf_inv[n]}},0)
+
+    /// @label Annual - reserve account cash flow
+    /// @unit EUR 000s
+    calc[t1] fs_ann_cf_rsv = IF({{tim_fy_end_flag[n]}}=1,SUMIFS({{fs_cf_rsv[:n]}},{{tim_fin_yr[:n]}},{{tim_fin_yr[n]}})+{{fs_cf_rsv[n]}},0)
+
+    /// @label Annual - debt financing cash flow
+    /// @unit EUR 000s
+    calc[t1] fs_ann_cf_debt = IF({{tim_fy_end_flag[n]}}=1,SUMIFS({{fs_cf_debt[:n]}},{{tim_fin_yr[:n]}},{{tim_fin_yr[n]}})+{{fs_cf_debt[n]}},0)
+
+    /// @label Annual - shareholder financing cash flow
+    /// @unit EUR 000s
+    calc[t1] fs_ann_cf_eq = IF({{tim_fy_end_flag[n]}}=1,SUMIFS({{fs_cf_eq[:n]}},{{tim_fin_yr[:n]}},{{tim_fin_yr[n]}})+{{fs_cf_eq[n]}},0)
+
+    /// @label Annual - net cash movement
+    /// @unit EUR 000s
+    calc[t1] fs_ann_cf_net = IF({{tim_fy_end_flag[n]}}=1,SUMIFS({{fs_cf_net[:n]}},{{tim_fin_yr[:n]}},{{tim_fin_yr[n]}})+{{fs_cf_net[n]}},0)
+
+  ## h_fs_ann_bs: Balance Sheet at Financial Year End
+
+    /// @label Annual - total assets at year end
+    /// @unit EUR 000s
+    calc[t1] fs_ann_assets = IF({{tim_fy_end_flag[n]}}=1,{{fs_bs_assets[n]}},0)
+
+    /// @label Annual - total liabilities at year end
+    /// @unit EUR 000s
+    calc[t1] fs_ann_liab = IF({{tim_fy_end_flag[n]}}=1,{{fs_bs_liab[n]}},0)
+
+    /// @label Annual - equity at year end
+    /// @unit EUR 000s
+    calc[t1] fs_ann_equity = IF({{tim_fy_end_flag[n]}}=1,{{fs_bs_equity[n]}},0)
+
+    /// @label Annual - cash at bank at year end
+    /// @unit EUR 000s
+    calc[t1] fs_ann_cash = IF({{tim_fy_end_flag[n]}}=1,{{fs_cash[n]}},0)
+
+
+# h_fs_chk: STATEMENT CHECKS
+
+  /// @label Balance sheet - net assets less equity
+  /// @unit EUR 000s
+  calc[t1] fs_bs_diff = {{fs_bs_net[n]}}-{{fs_bs_equity[n]}}
+
+  /// @label Balance sheet - does not balance
+  /// @unit check
+  calc chk_bs_balance = IF(OR(MAX({{fs_bs_diff[:]}})>{{cst_chk_tol}},MIN({{fs_bs_diff[:]}})<-{{cst_chk_tol}}),1,0)
+
+  /// @label Cash at bank - statement less waterfall
+  /// @unit EUR 000s
+  calc[t1] fs_cash_diff = {{fs_cash[n]}}-{{wf_cash_bal[n]}}
+
+  /// @label Cash at bank - statement differs from waterfall
+  /// @unit check
+  calc chk_cash_ties = IF(OR(MAX({{fs_cash_diff[:]}})>{{cst_chk_tol}},MIN({{fs_cash_diff[:]}})<-{{cst_chk_tol}}),1,0)
+
+  /// @label Retained earnings - flows do not reconcile
+  /// @unit check
+  calc chk_re_ties = IF(ABS(SUM({{fs_pl_pat[:]}})-SUM({{eq_div[:]}})-SUMIFS({{fs_re[:]}},{{tim_lst_prd_flag[:]}},1))>{{cst_chk_tol}},1,0)
