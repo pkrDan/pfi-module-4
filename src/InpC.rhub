@@ -67,6 +67,10 @@
     /// @unit EUR 000s
     input cpx_dev_amt = []  // active: 8000
 
+    /// @label Lease cost - annual amount during construction
+    /// @unit EUR 000s
+    input cpx_lease_annual = []  // active: 30
+
 
 # h_inpc_ops: OPERATIONS PHASE ASSUMPTIONS
 
@@ -90,6 +94,24 @@
     /// @unit %
     input opx_var_pct = []  // active: 0.05
 
+  ## h_inpc_lease: Lease Cost
+
+    /// @label Lease cost - fixed annual amount in operations
+    /// @unit EUR 000s
+    input lease_fixed_annual = []  // active: 50
+
+    /// @label Lease cost - annual revenue threshold for higher share
+    /// @unit EUR 000s
+    input lease_rev_threshold = []  // active: 40000
+
+    /// @label Lease cost - revenue share up to threshold
+    /// @unit %
+    input lease_share_base_pct = []  // active: 0.015
+
+    /// @label Lease cost - revenue share above threshold
+    /// @unit %
+    input lease_share_high_pct = []  // active: 0.025
+
   ## h_inpc_idx: Indexation
 
     /// @label Indexation - base date
@@ -112,7 +134,7 @@
 
     /// @label Payables - payment days
     /// @unit days
-    input wc_pay_days = []  // active: 45
+    input wc_pay_days = []  // active: 60
 
 
 # h_inpc_ast: ASSET ASSUMPTIONS

@@ -38,7 +38,7 @@
 
   /// @label Senior facility - debt capacity solver paste
   /// @unit EUR 000s
-  input sd_capacity_paste = []  // active: 338693.4027328845
+  input sd_capacity_paste = []  // active: 331770.33170292416
 
   /// @label Senior facility - debt service solver paste
   /// @unit EUR 000s

@@ -54,9 +54,13 @@
     /// @unit EUR 000s
     calc[t1] cpx_dev = {{cpx_dev_amt}}*{{tim_fc_flag[n]}}
 
+    /// @label Lease cost - construction
+    /// @unit EUR 000s
+    calc[t1] cpx_lease = {{cpx_lease_annual}}*{{tim_yr_frac[n]}}*{{tim_con_flag[n]}}
+
     /// @label Capex - total
     /// @unit EUR 000s
-    calc[t1] cpx_total = SUM(§{{cpx_pkg1[n]}}, {{cpx_pkg2[n]}}, {{cpx_pkg3[n]}}, {{cpx_pkg4[n]}}§)+{{cpx_cont[n]}}+{{cpx_dev[n]}}
+    calc[t1] cpx_total = SUM(§{{cpx_pkg1[n]}}, {{cpx_pkg2[n]}}, {{cpx_pkg3[n]}}, {{cpx_pkg4[n]}}§)+{{cpx_cont[n]}}+{{cpx_dev[n]}}+{{cpx_lease[n]}}
 
 
 # h_cons_vat: VAT FACILITY

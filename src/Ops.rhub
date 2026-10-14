@@ -50,6 +50,25 @@
   calc[t1] rev_total = {{rev_a[n]}}+{{rev_b[n]}}
 
 
+# h_ops_lease: LEASE COST
+
+  /// @label Lease cost - fixed
+  /// @unit EUR 000s
+  calc[t1] lease_fixed = {{lease_fixed_annual}}*{{tim_yr_frac[n]}}*{{idx_opx_factor[n]}}*{{tim_ops_flag[n]}}
+
+  /// @label Lease cost - revenue share up to threshold
+  /// @unit EUR 000s
+  calc[t1] lease_cst_rev_shr_up_threshold = {{lease_share_base_pct}}*MIN({{rev_total[n]}},{{lease_rev_threshold}}*{{tim_yr_frac[n]}})*{{tim_ops_flag[n]}}
+
+  /// @label Lease cost - revenue share above threshold
+  /// @unit EUR 000s
+  calc[t1] lease_cst_rev_shr_above_threshold = {{lease_share_high_pct}}*MAX(0,{{rev_total[n]}}-{{lease_rev_threshold}}*{{tim_yr_frac[n]}})*{{tim_ops_flag[n]}}
+
+  /// @label Lease cost - total
+  /// @unit EUR 000s
+  calc[t1] lease_total = {{lease_fixed[n]}}+{{lease_cst_rev_shr_up_threshold[n]}}+{{lease_cst_rev_shr_above_threshold[n]}}
+
+
 # h_ops_opx: OPERATING COSTS
 
   /// @label Opex - fixed
@@ -62,7 +81,7 @@
 
   /// @label Opex - total
   /// @unit EUR 000s
-  calc[t1] opx_total = {{opx_fixed[n]}}+{{opx_var[n]}}
+  calc[t1] opx_total = {{opx_fixed[n]}}+{{opx_var[n]}}+{{lease_total[n]}}
 
 
 # h_ops_ebitda: EBITDA
