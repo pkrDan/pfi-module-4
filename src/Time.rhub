@@ -1,0 +1,208 @@
+// Time — decompiler preview: structure, names and derived calc bodies are live output; non-compliant and underived rows render as `raw` lines (coordinates + cell payloads, verbatim)
+  /// @label Error chks
+  /// @slot error-checks
+  calc time_error_chks = {{total_checks}}  // link
+
+  /// @label Model period ending
+  /// @slot model-period-ending
+  calc[t1] time_mdl_prd_end = {{tim_prd_end[n]}}  // link
+
+  /// @label Alerts
+  /// @slot alerts
+  calc time_alerts = {{total_alerts}}  // link
+
+  /// @label Timeline label
+  /// @slot timeline-label
+  calc[t1] time_tmln_label = {{tim_tmln_label[n]}}  // link
+
+  /// @label Financial year
+  /// @slot contract-year
+  calc[t1] time_fin_yr = {{tim_fin_yr[n]}}  // link
+
+  /// @label Model column counter
+  /// @slot column-counter
+  calc[t1] time_column_counter = {{tim_prd_cntr[n]}}  // link
+
+
+# h_time_ruler: TIME RULER
+
+  ## h_time_frst_column: First model column
+
+    /// @label Model column counter
+    /// @unit counter
+    calc[t1] tim_prd_cntr = {{tim_prd_cntr[n-1]}}+1
+
+    /// @label Model column total
+    /// @unit columns
+    calc tim_lst_prd_num = MAX({{tim_prd_cntr[:]}})
+
+    /// @label First model column flag
+    /// @unit flag
+    calc[t1] tim_frst_prd_flag = IF({{tim_prd_cntr[n]}}=1,1,0)
+
+  ## h_time_mos_prd: Months per model period
+
+    /// @label End of construction period date
+    /// @unit date
+    calc tim_con_end_dt = EOMONTH({{tim_fc_dt}},{{tim_con_len_mos}})
+
+    /// @label Number of construction periods
+    /// @unit months
+    calc tim_con_prds = ROUND(YEARFRAC(EOMONTH({{tim_frst_prd_strt}},-1)+1,EOMONTH({{tim_con_end_dt}},0))*{{cst_mos_yr}},0)
+
+    /// @label Construction grain period flag
+    /// @unit flag
+    calc[t1] tim_con_grain_flag = IF({{tim_con_prds}}>={{tim_prd_cntr[n]}},1,0)
+
+    /// @label Primary timeline period flag
+    /// @unit flag
+    calc[t1] tim_prim_prd_flag = 1-{{tim_con_grain_flag[n]}}
+
+    /// @label Months per model period
+    /// @unit months
+    calc[t1] tim_mos_prd = {{tim_con_grain_flag[n]}}*{{tim_con_prd_mos}}+{{tim_ops_prd_mos}}*{{tim_prim_prd_flag[n]}}
+
+  ## h_time_prd_strt: Model period start date
+
+    /// @label Model period beginning
+    /// @unit date
+    calc[t1] tim_prd_beg = IF({{tim_frst_prd_flag[n]}}=1,{{tim_frst_prd_strt}},EDATE({{tim_prd_beg[n-1]}},{{tim_mos_prd[n-1]}}))
+
+  ## h_time_prd_end: Model period end date
+
+    /// @label Model period ending
+    /// @unit date
+    calc[t1] tim_prd_end = EOMONTH({{tim_prd_beg[n]}},{{tim_mos_prd[n]}}-1)
+
+
+# h_time_flags: FLAGS
+
+  ## h_time_fc_flag: Financial close date flag
+
+    /// @label Financial close date flag
+    /// @unit flag
+    calc[t1] tim_fc_flag = IF(AND({{tim_prd_end[n-1]}}<{{tim_fc_dt}},{{tim_prd_end[n]}}>={{tim_fc_dt}}),1,0)
+
+  ## h_time_con_strt: First construction period flag
+
+    /// @label First construction period flag
+    /// @unit flag
+    calc[t1] tim_con_strt_flag = {{tim_fc_flag[n-1]}}
+
+  ## h_time_con_end: End of construction period flag
+
+    /// @label End of construction period flag
+    /// @unit flag
+    calc[t1] tim_con_end_flag = IF(AND({{tim_prd_end[n-1]}}<{{tim_con_end_dt}},{{tim_prd_end[n]}}>={{tim_con_end_dt}}),1,0)
+
+  ## h_time_con_flag: Construction period flag
+
+    /// @label Construction period flag
+    /// @unit flag
+    calc[t1] tim_con_flag = {{tim_con_flag[n-1]}}+{{tim_con_strt_flag[n]}}-{{tim_con_end_flag[n-1]}}
+
+  ## h_time_ops_strt: First operating period flag
+
+    /// @label First operating period flag
+    /// @unit flag
+    calc[t1] tim_ops_strt_flag = {{tim_con_end_flag[n-1]}}
+
+  ## h_time_ops_lst: Last operating period flag
+
+    /// @label End of operating period
+    /// @unit date
+    calc tim_ops_end_dt = EOMONTH({{tim_con_end_dt}},{{tim_ops_len_yrs}}*{{cst_mos_yr}})
+
+    /// @label Last operating period flag
+    /// @unit flag
+    calc[t1] tim_ops_lst_flag = IF({{tim_prd_end[n]}}={{tim_ops_end_dt}},1,0)
+
+  ## h_time_ops_flag: Operating period flag
+
+    /// @label Operating period flag
+    /// @unit flag
+    calc[t1] tim_ops_flag = {{tim_ops_flag[n-1]}}+{{tim_ops_strt_flag[n]}}-{{tim_ops_lst_flag[n-1]}}
+
+  ## h_time_post_strt: First post operating period flag
+
+    /// @label First post operating period flag
+    /// @unit flag
+    calc[t1] tim_post_strt_flag = {{tim_ops_lst_flag[n-1]}}
+
+  ## h_time_esc_flag: Escalation period year end flag
+
+    /// @label Escalation year end month flag
+    /// @unit flag
+    calc[t1] tim_esc_yr_end_flag = IF(MONTH({{tim_prd_end[n]}})={{tim_esc_end_mo}},1,0)
+
+  ## h_time_fin_yr: Financial year
+
+    /// @label Contract year end month
+    /// @unit month
+    calc tim_cntr_yr_end_mo = MONTH({{tim_con_end_dt}})
+
+    /// @label End of financial year flag
+    /// @unit flag
+    calc[t1] tim_fy_end_flag = IF(MONTH({{tim_prd_end[n]}})={{tim_fy_end_mo}},1,0)
+
+    /// @label Financial year end applicable to period
+    /// @unit date
+    calc[t1] tim_fy_end_dt = IF({{tim_frst_prd_flag[n]}}=1,{{tim_frst_fy_end}},IF({{tim_fy_end_flag[n-1]}}=1,EOMONTH({{tim_fy_end_dt[n-1]}},{{cst_mos_yr}}),{{tim_fy_end_dt[n-1]}}))
+
+    /// @label Financial year
+    /// @unit year #
+    calc[t1] tim_fin_yr = YEAR({{tim_fy_end_dt[n]}})
+
+  ## h_time_tmln_label: Timeline label
+
+    /// @label Timeline label counter
+    /// @unit counter
+    calc[t1] tim_tmln_lbl_cntr = {{tim_tmln_lbl_cntr[n-1]}}+{{tim_frst_prd_flag[n]}}+{{tim_fc_flag[n]}}+{{tim_con_strt_flag[n]}}+{{tim_ops_strt_flag[n]}}+{{tim_post_strt_flag[n]}}
+
+    /// @label Timeline label
+    /// @unit label
+    calc[t1] tim_tmln_label = CHOOSE({{tim_tmln_lbl_cntr[n]}},{{cst_tmln_lbl_prefcst}},{{cst_tmln_lbl_fc}},{{cst_tmln_lbl_con}},{{cst_tmln_lbl_ops}},{{cst_tmln_lbl_post}})
+
+
+# h_time_counters: COUNTERS / PERIOD NUMBERS
+
+  ## h_time_cntr_prd: Period number
+
+    /// @label Contract period number
+    /// @unit counter
+    calc[t1] tim_cntr_prd_num = {{tim_cntr_prd_num[n-1]}}+{{tim_ops_flag[n]}}
+
+    /// @label Contract period quarter
+    /// @unit counter
+    calc[t1] tim_cntr_prd_qtr = IF({{tim_cntr_prd_qtr[n-1]}}={{cst_mos_yr}}/{{tim_ops_prd_mos}},1,{{tim_cntr_prd_qtr[n-1]}}+1)*{{tim_ops_flag[n]}}
+
+  ## h_time_cntr_yr: Contract year number
+
+    /// @label Contract year number
+    /// @unit counter
+    calc[t1] tim_cntr_yr_num = ({{tim_cntr_yr_num[n-1]}}+{{tim_fy_end_flag[n-1]}})*{{tim_ops_flag[n]}}
+
+
+# h_time_con_qtr: CONSTRUCTION QUARTER COUNTER
+
+  /// @label Construction quarter counter
+  /// @unit counter
+  calc[t1] tim_con_qtr_cntr = ({{tim_con_qtr_cntr[n-1]}}+{{tim_con_flag[n]}})*{{tim_con_flag[n]}}
+
+
+# h_time_dys_prd: DAYS IN PERIOD
+
+  /// @label Days in period
+  /// @unit days
+  calc[t1] tim_dys_prd = {{tim_prd_end[n]}}-{{tim_prd_beg[n]}}+1
+
+
+# h_time_contract: LIBRARY CONTRACT
+
+  /// @label Last model period flag
+  /// @unit flag
+  calc[t1] tim_lst_prd_flag = IF({{tim_prd_cntr[n]}}={{tim_lst_prd_num}},1,0)
+
+  /// @label Period fraction of a year (operating grain)
+  /// @unit fraction
+  calc tim_prd_fraction = {{tim_ops_prd_mos}}/{{cst_mos_yr}}

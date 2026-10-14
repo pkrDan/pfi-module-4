@@ -1,0 +1,4 @@
+// _timelines.rhub - generated on every pull from (workbook, config); read by nothing.
+// Ids re-derive from the assignment key each pull; do not edit.
+
+timeline t1 = {{tim_prd_end}}  // quarterly x183, 2026-01-31..2066-09-30, sheets: Time; counter: {{tim_prd_cntr}}

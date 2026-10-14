@@ -1,0 +1,26 @@
+// Check — decompiler preview: structure, names and derived calc bodies are live output; non-compliant and underived rows render as `raw` lines (coordinates + cell payloads, verbatim)
+// DERIVED — registrations come from @unit check / @unit alert scalars.
+// Read-only: push regenerates this tab and refuses edits to this file.
+  /// @label Error chks
+  /// @slot error-checks
+  calc chk_error_chks = {{total_checks}}  // link
+
+  /// @label Alerts
+  /// @slot alerts
+  calc chk_alerts = {{total_alerts}}  // link
+
+
+# h_chk_summary: CHECK SUMMARY
+
+// no checks registered — a summary scalar with @unit check registers one
+  /// @label Total checks
+  /// @unit check
+  calc total_checks = 0
+
+
+# h_alert_summary: ALERT SUMMARY
+
+// no alerts registered — a summary scalar with @unit alert registers one
+  /// @label Total alerts
+  /// @unit alert
+  calc total_alerts = 0

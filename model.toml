@@ -1,0 +1,35 @@
+schema = 1
+
+# The FAST starter's model — the build skill's step-2 model.toml, the model
+# every `cellori-dev new` begins from. make_starter.ps1 lands it on the hybrid
+# start template, pushes once, and ships the result as
+# standards/fast/fast_starter_v01.xlsm. Minimal on purpose: every extra key is
+# a rung of the refusal ladder (cellori-step-build-from-plan, step 2).
+
+[standard]
+uid = "fast"                                 # push writes rev/hash here itself
+rev = 9
+hash = "sha256:8e6d4b4b738f36728babcd523eb9f110bc317b7d8bb309f0321c2e452b6d718b"
+
+[workbook]
+header_scheme         = "quarterly-banner"   # a monthly or hybrid spine wears the quarterly banner
+timeseries_end_column = "GJ"                 # the hybrid template's own span; a model sets J + periods - 1
+
+# The scenario ribbon on InpC: three base cases in K:M (the client's case is
+# 1) and two scenarios in O:P; J, N and Q are the bands' structural blanks.
+# `infrastructure` is not optional: every picker reads the selector helpers
+# outside its own row, and without the key the closing pull renders every
+# InpC input as a raw row.
+[[sheet]]
+name = "InpC"
+
+  [sheet.scenario]
+  active_ref         = "InpC!$F$4"
+  active_ref_options = ["1", "2", "3", "4", "5"]
+  active_col         = "F"
+  check_col          = "I"
+  base_span          = "J:N"
+  scenario_span      = "O:Q"
+  base_case_cols     = "K:M"
+  scenario_case_cols = "O:P"
+  infrastructure     = ["2:9", "I:I"]

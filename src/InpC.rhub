@@ -1,0 +1,68 @@
+// InpC — decompiler preview: structure, names and derived calc bodies are live output; non-compliant and underived rows render as `raw` lines (coordinates + cell payloads, verbatim)
+
+# h_inpc_timing: TIMING ASSUMPTIONS
+
+  /// @label First date of time rulers
+  /// @unit date
+  input tim_frst_prd_strt = []  // active: 46023
+
+  /// @label Financial year end date of first model period
+  /// @unit date
+  input tim_frst_fy_end = []  // active: 46387
+
+  /// @label Length of construction period
+  /// @unit months
+  input tim_con_prd_mos = []  // active: 1
+
+  /// @label Length of operating period
+  /// @unit months
+  input tim_ops_prd_mos = []  // active: 3
+
+  /// @label Financial year end month number
+  /// @unit month #
+  input tim_fy_end_mo = []  // active: 12
+
+  /// @label Escalation period end month
+  /// @unit month
+  input tim_esc_end_mo = []  // active: 12
+
+  /// @label Financial close date
+  /// @unit date
+  input tim_fc_dt = []  // active: 46203
+
+  /// @label Construction period length
+  /// @unit months
+  input tim_con_len_mos = []  // active: 24
+
+  /// @label Operational period
+  /// @unit years
+  input tim_ops_len_yrs = []  // active: 25
+
+
+# h_inpc_constants: MODEL TECHNICAL INPUTS - DO NOT CHANGE
+
+  /// @label Months in year
+  /// @unit months
+  input cst_mos_yr = []  // active: 12
+
+  ## h_inpc_tmln_label: Timeline label
+
+    /// @label Pre-forecast period
+    /// @unit label
+    input cst_tmln_lbl_prefcst = []  // active: Pre-fcst
+
+    /// @label Financial Close
+    /// @unit label
+    input cst_tmln_lbl_fc = []  // active: Fin Close
+
+    /// @label Construction
+    /// @unit label
+    input cst_tmln_lbl_con = []  // active: Construction
+
+    /// @label Operations
+    /// @unit label
+    input cst_tmln_lbl_ops = []  // active: Operations
+
+    /// @label Post ops
+    /// @unit label
+    input cst_tmln_lbl_post = []  // active: Post ops
